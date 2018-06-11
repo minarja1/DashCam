@@ -28,12 +28,47 @@
     <!-- Strings related to Settings -->
     <string name="pref_units_title">Speed units</string>
     <string-array name="pref_units_list_titles">
-        <item>kph</item>
-        <item>mph</item>
+        <item>Kilometers per hour</item>
+        <item>Miles per hour</item>
     </string-array>
     <string-array name="pref_units_list_values">
         <item>kph</item>
         <item>mph</item>
+    </string-array>
+
+    <string name="pref_quality_title">Quality</string>
+    <string-array name="pref_quality_list_titles">
+        <item>High</item>
+        <item>Medium</item>
+        <item>Low</item>
+    </string-array>
+    <string-array name="pref_quality_list_values">
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+    </string-array>
+
+
+    <string name="pref_fps_title">Frame rate</string>
+    <string-array name="pref_fps_list_titles">
+        <item>15</item>
+        <item>30</item>
+        <item>60</item>
+    </string-array>
+    <string-array name="pref_fps_list_values">
+        <item>15</item>
+        <item>30</item>
+        <item>60</item>
+    </string-array>
+
+    <string name="pref_resolution_title">Resolution</string>
+    <string-array name="pref_resolution_list_titles">
+        <item>FullHD</item>
+        <item>HD</item>
+    </string-array>
+    <string-array name="pref_resolution_list_values">
+        <item>1</item>
+        <item>2</item>
     </string-array>
 
     <!-- Example General settings -->
@@ -120,4 +155,5 @@
     <string name="search">Search</string>
     <string name="no_videos">No videos found</string>
     <string name="displaying_res">Displaying results for</string>
+    <string name="video">Video</string>
 </resources>

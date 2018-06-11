@@ -26,12 +26,9 @@ import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
 import android.media.MediaRecorder;
-import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
-import android.os.Looper;
 import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -67,10 +64,8 @@ import com.jakubminarik.dashcam.settings.SettingsActivity;
 import com.jakubminarik.dashcam.settings.SettingsFragment;
 import com.jakubminarik.dashcam.view.AutoFitTextureView;
 
-import java.io.File;
 import java.io.IOException;
 import java.sql.Date;
-import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -82,8 +77,6 @@ import java.util.concurrent.TimeUnit;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
-
-import static com.jakubminarik.dashcam.base.Constants.ALBUM_NAME;
 
 public class RecordFragment extends Fragment implements View.OnClickListener, FragmentCompat.OnRequestPermissionsResultCallback {
 
@@ -420,8 +413,9 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
 
     @Override
     public void onPause() {
-        closeCamera();
-        stopBackgroundThread();
+        //podle me neni treba v onPause zastavovat, chtelo by to otestovat
+//        closeCamera();
+//        stopBackgroundThread();
         super.onPause();
     }
 
@@ -456,14 +450,21 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
      * @param choices The list of available sizes
      * @return The video size
      */
-    private static Size chooseVideoSize(Size[] choices) {
-        for (Size size : choices) {
-            if (size.getWidth() == size.getHeight() * VIDEO_WIDTH / VIDEO_HEIGHT && size.getWidth() <= 1080) {
-                return size;
+    private Size chooseVideoSize(Size[] choices) {
+        String resString = sharedPref.getString(SettingsFragment.KEY_RESOLUTION, "1");
+        if (resString.equals("1")) {
+            return new Size(1920, 1080);
+        } else if (resString.equals("2")) {
+            return new Size(1280, 720);
+        } else {
+            for (Size size : choices) {
+                if (size.getWidth() == size.getHeight() * VIDEO_WIDTH / VIDEO_HEIGHT && size.getWidth() <= 1080) {
+                    return size;
+                }
             }
+            Log.e(TAG, "Couldn't find any suitable video size");
+            return choices[choices.length - 1];
         }
-        Log.e(TAG, "Couldn't find any suitable video size");
-        return choices[choices.length - 1];
     }
 
     /**
@@ -748,6 +749,8 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
     }
 
     private void setUpMediaRecorder() throws IOException {
+        String qualityString = sharedPref.getString(SettingsFragment.KEY_QUALITY, "2");
+
         final Activity activity = getActivity();
         if (null == activity) {
             return;
@@ -759,8 +762,14 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
             mNextVideoAbsolutePath = StorageHelper.getVideoFilePath();
         }
         mMediaRecorder.setOutputFile(mNextVideoAbsolutePath);
-        mMediaRecorder.setVideoEncodingBitRate(10000000);
-        mMediaRecorder.setVideoFrameRate(30);
+        if (qualityString.equals("1")) { //high
+            mMediaRecorder.setVideoEncodingBitRate(15000000);
+        } else if (qualityString.equals("2")) { //medium
+            mMediaRecorder.setVideoEncodingBitRate(10000000);
+        } else if (qualityString.equals("3")) { //low
+            mMediaRecorder.setVideoEncodingBitRate(5000000);
+        }
+        mMediaRecorder.setVideoFrameRate(Integer.valueOf(sharedPref.getString(SettingsFragment.KEY_FPS, "30")));
         mMediaRecorder.setVideoSize(mVideoSize.getWidth(), mVideoSize.getHeight());
         mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
         mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);

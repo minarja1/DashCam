@@ -1,12 +1,10 @@
 package com.jakubminarik.dashcam.play;
 
 import android.os.Bundle;
-import android.widget.Toast;
 
 import com.jakubminarik.dashcam.DAO.VideoDAO;
 import com.jakubminarik.dashcam.base.BasePresenter;
 import com.jakubminarik.dashcam.model.Video;
-import com.raizlabs.android.dbflow.sql.language.SQLite;
 
 import java.io.File;
 import java.io.Serializable;

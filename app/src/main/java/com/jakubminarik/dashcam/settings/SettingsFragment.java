@@ -9,6 +9,10 @@ import com.jakubminarik.dashcam.R;
 
 public class SettingsFragment extends PreferenceFragment {
     public static final String KEY_UNITS = "units";
+    public static final String KEY_QUALITY = "quality";
+    public static final String KEY_FPS = "frameRate";
+    public static final String KEY_RESOLUTION = "resolution";
+
     SharedPreferences.OnSharedPreferenceChangeListener listener;
 
     @Override
@@ -19,14 +23,13 @@ public class SettingsFragment extends PreferenceFragment {
         addPreferencesFromResource(R.xml.preferences);
 
         listener = new SharedPreferences.OnSharedPreferenceChangeListener() {
-                    public void onSharedPreferenceChanged(SharedPreferences prefs, String key) {
-                        if (key.equals(KEY_UNITS)) {
-                            Preference connectionPref = findPreference(key);
-                            // Set summary to be the user-description for the selected value
-                            connectionPref.setSummary(prefs.getString(key, "kph"));
-                        }
-                    }
-                };
+            public void onSharedPreferenceChanged(SharedPreferences prefs, String key) {
+                Preference connectionPref = findPreference(key);
+                if (key.equals(KEY_UNITS)) {
+                    //nakonec to neni potreba :)
+                }
+            }
+        };
     }
 
     @Override

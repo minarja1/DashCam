@@ -2,21 +2,54 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
 
 
-    <PreferenceCategory
-        android:title="@string/pref_header_general">
+    <PreferenceCategory android:title="@string/pref_header_general">
 
 
         <ListPreference xmlns:android="http://schemas.android.com/apk/res/android"
-            android:summary="%s"
             android:defaultValue="kph"
             android:entries="@array/pref_units_list_titles"
             android:entryValues="@array/pref_units_list_values"
             android:key="units"
             android:negativeButtonText="@null"
             android:positiveButtonText="@null"
+            android:summary="%s"
             android:title="@string/pref_units_title" />
 
     </PreferenceCategory>
 
+    <PreferenceCategory android:title="@string/video">
+
+
+        <ListPreference xmlns:android="http://schemas.android.com/apk/res/android"
+            android:defaultValue="2"
+            android:entries="@array/pref_quality_list_titles"
+            android:entryValues="@array/pref_quality_list_values"
+            android:key="quality"
+            android:negativeButtonText="@null"
+            android:positiveButtonText="@null"
+            android:summary="%s"
+            android:title="@string/pref_quality_title" />
+
+        <ListPreference xmlns:android="http://schemas.android.com/apk/res/android"
+            android:defaultValue="30"
+            android:entries="@array/pref_fps_list_titles"
+            android:entryValues="@array/pref_fps_list_values"
+            android:key="frameRate"
+            android:negativeButtonText="@null"
+            android:positiveButtonText="@null"
+            android:summary="%s"
+            android:title="@string/pref_fps_title" />
+
+        <ListPreference xmlns:android="http://schemas.android.com/apk/res/android"
+            android:defaultValue="1"
+            android:entries="@array/pref_resolution_list_titles"
+            android:entryValues="@array/pref_resolution_list_values"
+            android:key="resolution"
+            android:negativeButtonText="@null"
+            android:positiveButtonText="@null"
+            android:summary="%s"
+            android:title="@string/pref_resolution_title" />
+
+    </PreferenceCategory>
 
 </PreferenceScreen>
