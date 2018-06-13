@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <item name="displaying_res" type="id">Displaying results for</item>
+    <item name="minutes" type="id">Minutes</item>
 </resources>

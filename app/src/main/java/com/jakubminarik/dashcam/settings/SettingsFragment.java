@@ -12,6 +12,7 @@ public class SettingsFragment extends PreferenceFragment {
     public static final String KEY_QUALITY = "quality";
     public static final String KEY_FPS = "frameRate";
     public static final String KEY_RESOLUTION = "resolution";
+    public static final String KEY_DURATION = "duration";
 
     SharedPreferences.OnSharedPreferenceChangeListener listener;
 

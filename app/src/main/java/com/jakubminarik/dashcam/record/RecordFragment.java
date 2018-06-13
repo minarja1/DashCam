@@ -29,7 +29,6 @@ import android.media.MediaRecorder;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
-import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v13.app.FragmentCompat;
@@ -44,7 +43,6 @@ import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Chronometer;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -56,7 +54,14 @@ import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.LocationSettingsRequest;
 import com.google.android.gms.location.SettingsClient;
+import com.googlecode.mp4parser.BasicContainer;
+import com.googlecode.mp4parser.authoring.Movie;
+import com.googlecode.mp4parser.authoring.Track;
+import com.googlecode.mp4parser.authoring.builder.DefaultMp4Builder;
+import com.googlecode.mp4parser.authoring.container.mp4.MovieCreator;
+import com.googlecode.mp4parser.authoring.tracks.AppendTrack;
 import com.jakubminarik.dashcam.R;
+import com.jakubminarik.dashcam.helper.FileHelper;
 import com.jakubminarik.dashcam.helper.StorageHelper;
 import com.jakubminarik.dashcam.model.Video;
 import com.jakubminarik.dashcam.play.PlayActivity;
@@ -64,11 +69,15 @@ import com.jakubminarik.dashcam.settings.SettingsActivity;
 import com.jakubminarik.dashcam.settings.SettingsFragment;
 import com.jakubminarik.dashcam.view.AutoFitTextureView;
 
+import java.io.File;
 import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.nio.channels.FileChannel;
 import java.sql.Date;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.Semaphore;
@@ -77,6 +86,9 @@ import java.util.concurrent.TimeUnit;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
+
+import static com.jakubminarik.dashcam.base.Constants.TEMP1;
+import static com.jakubminarik.dashcam.base.Constants.TEMP2;
 
 public class RecordFragment extends Fragment implements View.OnClickListener, FragmentCompat.OnRequestPermissionsResultCallback {
 
@@ -247,10 +259,11 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
     TextView addressTextView;
     @BindView(R.id.speedTextView)
     TextView speedTextView;
-    @BindView(R.id.chronometer)
-    Chronometer chronometer;
     @BindView(R.id.settingsButton)
     ImageButton settingsButton;
+    @BindView(R.id.durationTextView)
+    TextView durationTextView;
+
     private LocationRequest locationRequest;
     private static int UPDATE_INTERVAL = 1000;//1 sec
     private static int FASTEST_INTERVAL = 500;
@@ -258,6 +271,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
     private boolean cameraOpened = false;
     private SharedPreferences sharedPref;
     private boolean kph;
+    private int durationInMinutes;
 
     public static RecordFragment newInstance() {
         return new RecordFragment();
@@ -283,7 +297,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
             requestPermissionsLocation();
         }
         sharedPref = PreferenceManager.getDefaultSharedPreferences(getActivity());
-
     }
 
     private void requestPermissionsLocation() {
@@ -394,8 +407,8 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
         mTextureView = view.findViewById(R.id.texture);
         recordImage = view.findViewById(R.id.videoButton);
         recordImage.setOnClickListener(this);
-        chronometer.setFormat("00:%s");
         view.findViewById(R.id.infoButton).setOnClickListener(this);
+
     }
 
     @Override
@@ -408,15 +421,45 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
             mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);
         }
         String unitsStrings = sharedPref.getString(SettingsFragment.KEY_UNITS, "kph");
+
         kph = unitsStrings.equals("kph");
+
+        String durationString = sharedPref.getString(SettingsFragment.KEY_DURATION, "10");
+        switch (durationString) {
+            case "5":
+                durationInMinutes = 5;
+                break;
+            case "10":
+                durationInMinutes = 10;
+                break;
+            case "15":
+                durationInMinutes = 15;
+                break;
+            case "30":
+                durationInMinutes = 30;
+                break;
+
+            default:
+                durationInMinutes = 10;
+        }
+
+        durationTextView.setText(String.format("%s %s", durationInMinutes, getResources().getString(R.string.minutes)));
     }
 
     @Override
     public void onPause() {
-        //podle me neni treba v onPause zastavovat, chtelo by to otestovat
+        //podle me neni treba v onPause zastavovat, chtelo by to testera :)
 //        closeCamera();
 //        stopBackgroundThread();
         super.onPause();
+    }
+
+    @Override
+    public void onStop() {
+        //todo stop recording, close camera, stop background thread
+//        closeCamera();
+//        stopBackgroundThread();
+        super.onStop();
     }
 
     @Override
@@ -443,13 +486,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
         }
     }
 
-    /**
-     * In this sample, we choose a video size with 3x4 aspect ratio. Also, we don't use sizes
-     * larger than 1080p, since MediaRecorder cannot handle such a high-resolution video.
-     *
-     * @param choices The list of available sizes
-     * @return The video size
-     */
+
     private Size chooseVideoSize(Size[] choices) {
         String resString = sharedPref.getString(SettingsFragment.KEY_RESOLUTION, "1");
         if (resString.equals("1")) {
@@ -758,10 +795,8 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
         mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
         mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
         mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
-        if (mNextVideoAbsolutePath == null || mNextVideoAbsolutePath.isEmpty()) {
-            mNextVideoAbsolutePath = StorageHelper.getVideoFilePath();
-        }
-        mMediaRecorder.setOutputFile(mNextVideoAbsolutePath);
+
+        mMediaRecorder.setOutputFile(getNextOutputFile());
         if (qualityString.equals("1")) { //high
             mMediaRecorder.setVideoEncodingBitRate(15000000);
         } else if (qualityString.equals("2")) { //medium
@@ -769,6 +804,15 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
         } else if (qualityString.equals("3")) { //low
             mMediaRecorder.setVideoEncodingBitRate(5000000);
         }
+        mMediaRecorder.setMaxDuration(1000 * 60 * durationInMinutes);
+        mMediaRecorder.setOnInfoListener(new MediaRecorder.OnInfoListener() {
+            @Override
+            public void onInfo(MediaRecorder mr, int what, int extra) {
+                if (what == MediaRecorder.MEDIA_RECORDER_INFO_MAX_DURATION_REACHED) {
+                    saveTempVideoAndStartRecordingAgain();
+                }
+            }
+        });
         mMediaRecorder.setVideoFrameRate(Integer.valueOf(sharedPref.getString(SettingsFragment.KEY_FPS, "30")));
         mMediaRecorder.setVideoSize(mVideoSize.getWidth(), mVideoSize.getHeight());
         mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
@@ -785,6 +829,10 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
         mMediaRecorder.prepare();
     }
 
+
+    private String getNextOutputFile() {
+        return StorageHelper.getPublicAlbumStorageDirFile() + TEMP1;
+    }
 
     private void startRecordingVideo() {
         if (null == mCameraDevice || !mTextureView.isAvailable() || null == mPreviewSize) {
@@ -841,8 +889,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
         } catch (CameraAccessException | IOException e) {
             e.printStackTrace();
         }
-        chronometer.setBase(SystemClock.elapsedRealtime());
-        chronometer.start();
 
     }
 
@@ -853,16 +899,33 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
         }
     }
 
+
+    private void saveTempVideoAndStartRecordingAgain() {
+        mIsRecordingVideo = false;
+        mMediaRecorder.stop();
+        mMediaRecorder.reset();
+
+        //delete temp2
+        File temp2 = new File(StorageHelper.getPublicAlbumStorageDirFile() + TEMP2);
+        temp2.delete();
+
+        //rename temp1 to temp2
+        File temp1 = new File(StorageHelper.getPublicAlbumStorageDirFile() + TEMP1);
+        FileHelper.rename(temp1, temp2);
+
+        startRecordingVideo();
+    }
+
+
     private void stopRecordingVideo() {
         // UI
         mIsRecordingVideo = false;
         recordImage.setImageDrawable(getResources().getDrawable(R.drawable.ic_fiber_manual_record_red_24dp));
-        chronometer.stop();
-        chronometer.setBase(SystemClock.elapsedRealtime());
         // Stop recording
         mMediaRecorder.stop();
         mMediaRecorder.reset();
-        saveVideo();
+        mergeTempFiles();
+        saveResult();
 
         Activity activity = getActivity();
         if (null != activity) {
@@ -872,7 +935,66 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
         startPreview();
     }
 
-    private void saveVideo() {
+    /**
+     * Merges two temp videos into result and deletes them, if both exist. Otherwise sets temp1 as result.
+     */
+    private void mergeTempFiles() {
+        try {
+            File file1 = new File(StorageHelper.getPublicAlbumStorageDirFile() + TEMP1);
+            File file2 = new File(StorageHelper.getPublicAlbumStorageDirFile() + TEMP2);
+
+            if (!file1.exists()) { //should not happen
+                return;
+            }
+            mNextVideoAbsolutePath = StorageHelper.getVideoFilePath();
+            if (!file2.exists()) {
+                FileHelper.rename(file1, new File(mNextVideoAbsolutePath));
+            } else {
+                //todo z nejakeho zahadneho duvodu jsou videa opacne
+                Movie[] inMovies = new Movie[]{MovieCreator.build(file2.getAbsolutePath()),
+                        MovieCreator.build(file1.getAbsolutePath())};
+
+                List<Track> videoTracks = new LinkedList<>();
+                List<Track> audioTracks = new LinkedList<>();
+
+                for (Movie m : inMovies) {
+                    for (Track t : m.getTracks()) {
+                        if (t.getHandler().equals("soun")) {
+                            audioTracks.add(t);
+                        }
+                        if (t.getHandler().equals("vide")) {
+                            videoTracks.add(t);
+                        }
+                    }
+                }
+
+                Movie result = new Movie();
+
+                if (audioTracks.size() > 0) {
+                    result.addTrack(new AppendTrack(audioTracks.toArray(new Track[audioTracks.size()])));
+                }
+                if (videoTracks.size() > 0) {
+                    result.addTrack(new AppendTrack(videoTracks.toArray(new Track[videoTracks.size()])));
+                }
+
+                BasicContainer out = (BasicContainer) new DefaultMp4Builder().build(result);
+
+                FileChannel fc = new RandomAccessFile(mNextVideoAbsolutePath,
+                        "rw").getChannel();
+                out.writeContainer(fc);
+                fc.close();
+                file1.delete();
+                file2.delete();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Saves result of recording to DB.
+     */
+    private void saveResult() {
         Video video = new Video();
         video.setPathToFile(mNextVideoAbsolutePath);
         video.setName(mNextVideoAbsolutePath.substring(mNextVideoAbsolutePath.lastIndexOf("/") + 1));

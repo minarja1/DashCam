@@ -8,7 +8,7 @@
     android:focusable="true"
     android:orientation="horizontal"
     android:paddingBottom="14dp"
-    android:paddingStart="20dp"
+    android:paddingStart="16dp"
     android:paddingTop="14dp">
 
     <RelativeLayout

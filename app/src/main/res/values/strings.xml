@@ -36,6 +36,20 @@
         <item>mph</item>
     </string-array>
 
+    <string name="pref_duration_title">Duration</string>
+    <string-array name="pref_duration_list_titles">
+        <item>5 minutes</item>
+        <item>10 minutes</item>
+        <item>15 minutes</item>
+        <item>30 minutes</item>
+    </string-array>
+    <string-array name="pref_duration_list_values">
+        <item>5</item>
+        <item>10</item>
+        <item>15</item>
+        <item>30</item>
+    </string-array>
+
     <string name="pref_quality_title">Quality</string>
     <string-array name="pref_quality_list_titles">
         <item>High</item>
@@ -156,4 +170,5 @@
     <string name="no_videos">No videos found</string>
     <string name="displaying_res">Displaying results for</string>
     <string name="video">Video</string>
+    <string name="minutes">minutes</string>
 </resources>
