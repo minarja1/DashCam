@@ -2,8 +2,6 @@ package com.jakubminarik.dashcam;
 
 import android.app.Activity;
 import android.app.Application;
-import android.support.v4.app.Fragment;
-
 
 import com.raizlabs.android.dbflow.config.FlowConfig;
 import com.raizlabs.android.dbflow.config.FlowLog;

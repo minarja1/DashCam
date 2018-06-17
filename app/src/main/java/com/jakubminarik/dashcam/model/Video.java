@@ -1,5 +1,7 @@
 package com.jakubminarik.dashcam.model;
 
+import android.support.annotation.Nullable;
+
 import com.raizlabs.android.dbflow.annotation.Column;
 import com.raizlabs.android.dbflow.annotation.PrimaryKey;
 import com.raizlabs.android.dbflow.annotation.Table;
@@ -20,6 +22,10 @@ public class Video extends BaseModel {
     private String pathToFile;
 
     @Column
+    private String pathToImage;
+
+    @Column
+    @Nullable
     private Date timestamp;
 
     public int getId() {
@@ -52,5 +58,14 @@ public class Video extends BaseModel {
 
     public void setTimestamp(Date timestamp) {
         this.timestamp = timestamp;
+    }
+
+    @Nullable
+    public String getPathToImage() {
+        return pathToImage;
+    }
+
+    public void setPathToImage(String pathToImage) {
+        this.pathToImage = pathToImage;
     }
 }

@@ -39,7 +39,7 @@
             android:name=".settings.SettingsActivity"
             android:screenOrientation="sensor"
             android:theme="@style/preferenceTheme" />
-        <activity android:name=".play.PlayActivity"></activity>
+        <activity android:name=".play.PlayActivity" />
     </application>
 
 </manifest>

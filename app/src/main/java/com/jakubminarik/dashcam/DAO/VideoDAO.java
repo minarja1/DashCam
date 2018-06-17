@@ -27,4 +27,8 @@ public final class VideoDAO {
                 from(Video.class)
                 .queryList();
     }
+
+    public static Video findById(int id) {
+        return SQLite.select().from(Video.class).where(Video_Table.id.eq(id)).querySingle();
+    }
 }

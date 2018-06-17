@@ -17,6 +17,12 @@ public final class StorageHelper {
                 + System.currentTimeMillis() + ".mp4";
     }
 
+    public static String getImageFilePath() {
+        final File dir = getPublicAlbumStorageDirFile();
+        return (dir == null ? "" : (dir.getAbsolutePath() + "/"))
+                + System.currentTimeMillis() + ".jpg";
+    }
+
     public static File getPublicAlbumStorageDirFile() {
         File file = new File(Environment.getExternalStoragePublicDirectory(
                 Environment.DIRECTORY_MOVIES), ALBUM_NAME);

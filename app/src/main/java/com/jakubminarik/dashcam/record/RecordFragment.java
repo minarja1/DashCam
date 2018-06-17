@@ -261,6 +261,9 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
     @BindView(R.id.durationTextView)
     TextView durationTextView;
 
+    @BindView(R.id.videoButton)
+    ImageView recordButton;
+
     private LocationRequest locationRequest;
     private static int FASTEST_INTERVAL = 500;
     private Geocoder geocoder;
@@ -800,7 +803,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
             mMediaRecorder.setVideoEncodingBitRate(5000000);
         }
         mMediaRecorder.setMaxDuration(1000 * 60 * durationInMinutes);
-        mMediaRecorder.setMaxDuration(10000);
+//        mMediaRecorder.setMaxDuration(10000);
         mMediaRecorder.setOnInfoListener(new MediaRecorder.OnInfoListener() {
             @Override
             public void onInfo(MediaRecorder mr, int what, int extra) {
@@ -917,8 +920,11 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
 
 
     private void stopRecordingVideo() {
-        if (!mIsRecordingVideo)
+        onSavingVideo();
+        if (!mIsRecordingVideo){
+            onVideoSaved();
             return;
+        }
         // UI
         mIsRecordingVideo = false;
         recordImage.setImageDrawable(getResources().getDrawable(R.drawable.ic_fiber_manual_record_red_24dp));
@@ -934,6 +940,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
         }
         mNextVideoAbsolutePath = null;
         startPreview();
+        onVideoSaved();
     }
 
     /**
@@ -1001,6 +1008,10 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
         video.setName(mNextVideoAbsolutePath.substring(mNextVideoAbsolutePath.lastIndexOf("/") + 1));
         video.setTimestamp(new Date(System.currentTimeMillis()));
         video.save();
+        RecordActivity activity = (RecordActivity) getActivity();
+        if (activity != null) {
+            activity.onVideoStopped(video.getId());
+        }
     }
 
     /**
@@ -1069,5 +1080,17 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
                     .create();
         }
 
+    }
+
+    public boolean ismIsRecordingVideo() {
+        return mIsRecordingVideo;
+    }
+
+    private void onSavingVideo() {
+        recordButton.setVisibility(View.GONE);
+    }
+
+    private void onVideoSaved() {
+        recordButton.setVisibility(View.VISIBLE);
     }
 }

@@ -5,7 +5,6 @@ import com.jakubminarik.dashcam.home.MainActivity;
 import com.jakubminarik.dashcam.play.PlayActivity;
 import com.jakubminarik.dashcam.record.RecordActivity;
 
-
 import dagger.Module;
 import dagger.android.ContributesAndroidInjector;
 
@@ -13,10 +12,13 @@ import dagger.android.ContributesAndroidInjector;
 public abstract class DashCamModule {
     @ContributesAndroidInjector
     abstract MainActivity injectMainActivity();
+
     @ContributesAndroidInjector
     abstract AboutActivity injectAboutActivity();
+
     @ContributesAndroidInjector
     abstract RecordActivity injectRecordActivity();
+
     @ContributesAndroidInjector
     abstract PlayActivity injectPlayActivity();
 
