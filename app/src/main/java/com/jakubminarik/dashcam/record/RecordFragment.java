@@ -25,7 +25,9 @@ import android.hardware.camera2.params.StreamConfigurationMap;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
+import android.media.CamcorderProfile;
 import android.media.MediaRecorder;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -48,12 +50,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
-import com.google.android.gms.location.LocationResult;
-import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.location.LocationSettingsRequest;
-import com.google.android.gms.location.SettingsClient;
 import com.googlecode.mp4parser.BasicContainer;
 import com.googlecode.mp4parser.authoring.Movie;
 import com.googlecode.mp4parser.authoring.Track;
@@ -90,7 +87,7 @@ import butterknife.OnClick;
 import static com.jakubminarik.dashcam.base.Constants.TEMP1;
 import static com.jakubminarik.dashcam.base.Constants.TEMP2;
 
-public class RecordFragment extends Fragment implements View.OnClickListener, FragmentCompat.OnRequestPermissionsResultCallback {
+public class RecordFragment extends Fragment implements View.OnClickListener, FragmentCompat.OnRequestPermissionsResultCallback, RecordFragmentView {
 
 
     private static final int SENSOR_ORIENTATION_DEFAULT_DEGREES = 90;
@@ -265,7 +262,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
     TextView durationTextView;
 
     private LocationRequest locationRequest;
-    private static int UPDATE_INTERVAL = 1000;//1 sec
     private static int FASTEST_INTERVAL = 500;
     private Geocoder geocoder;
     private boolean cameraOpened = false;
@@ -290,12 +286,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         geocoder = new Geocoder(getActivity(), Locale.getDefault());
-        if (hasPermissionsGranted(LOCATION_PERMISSIONS)) {
-            startLocationUpdates();
-        }
-        {
-            requestPermissionsLocation();
-        }
         sharedPref = PreferenceManager.getDefaultSharedPreferences(getActivity());
     }
 
@@ -308,40 +298,40 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
 
     }
 
+//    @SuppressWarnings("MissingPermission")
+//    // Trigger new location updates at interval
+//    protected void startLocationUpdates() {
+//        if (mBackgroundThread == null) {
+//            startBackgroundThread();
+//        }
+//        // Create the location request to start receiving updates
+//        locationRequest = LocationRequest.create();
+//        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+//        locationRequest.setInterval(UPDATE_INTERVAL);
+//        locationRequest.setFastestInterval(FASTEST_INTERVAL);
+//
+//        // Create LocationSettingsRequest object using location request
+//        LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder();
+//        builder.addLocationRequest(locationRequest);
+//        LocationSettingsRequest locationSettingsRequest = builder.build();
+//
+//        // Check whether location settings are satisfied
+//        SettingsClient settingsClient = LocationServices.getSettingsClient(getActivity());
+//        settingsClient.checkLocationSettings(locationSettingsRequest);
+//
+//        LocationServices.getFusedLocationProviderClient(getActivity()).requestLocationUpdates(locationRequest, new LocationCallback() {
+//                    @Override
+//                    public void onLocationResult(LocationResult locationResult) {
+//                        if (locationResult == null) {
+//                            return;
+//                        }
+//                        onLocationChanged(locationResult.getLastLocation());
+//                    }
+//                },
+//                mBackgroundThread.getLooper());
+//    }
 
-    @SuppressWarnings("MissingPermission")
-    // Trigger new location updates at interval
-    protected void startLocationUpdates() {
-        if (mBackgroundThread == null) {
-            startBackgroundThread();
-        }
-        // Create the location request to start receiving updates
-        locationRequest = LocationRequest.create();
-        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        locationRequest.setInterval(UPDATE_INTERVAL);
-        locationRequest.setFastestInterval(FASTEST_INTERVAL);
-
-        // Create LocationSettingsRequest object using location request
-        LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder();
-        builder.addLocationRequest(locationRequest);
-        LocationSettingsRequest locationSettingsRequest = builder.build();
-
-        // Check whether location settings are satisfied
-        SettingsClient settingsClient = LocationServices.getSettingsClient(getActivity());
-        settingsClient.checkLocationSettings(locationSettingsRequest);
-
-        LocationServices.getFusedLocationProviderClient(getActivity()).requestLocationUpdates(locationRequest, new LocationCallback() {
-                    @Override
-                    public void onLocationResult(LocationResult locationResult) {
-                        if (locationResult == null) {
-                            return;
-                        }
-                        onLocationChanged(locationResult.getLastLocation());
-                    }
-                },
-                mBackgroundThread.getLooper());
-    }
-
+    @Override
     public void onLocationChanged(final Location location) {
         List<Address> addresses = new ArrayList<>();
         try {
@@ -456,9 +446,11 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
 
     @Override
     public void onStop() {
-        //todo stop recording, close camera, stop background thread
-//        closeCamera();
-//        stopBackgroundThread();
+        //free up resources if not recording
+        if (!mIsRecordingVideo) {
+            closeCamera();
+            stopBackgroundThread();
+        }
         super.onStop();
     }
 
@@ -602,10 +594,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
                 ErrorDialog.newInstance(getString(R.string.permission_request))
                         .show(getChildFragmentManager(), FRAGMENT_DIALOG);
 
-            }
-        } else if (requestCode == REQUEST_LOCATION_PERMISSIONS) {
-            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                startLocationUpdates();
             }
         } else {
             super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -787,6 +775,8 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
 
     private void setUpMediaRecorder() throws IOException {
         String qualityString = sharedPref.getString(SettingsFragment.KEY_QUALITY, "2");
+        String resString = sharedPref.getString(SettingsFragment.KEY_RESOLUTION, "1");
+
 
         final Activity activity = getActivity();
         if (null == activity) {
@@ -794,7 +784,12 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
         }
         mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
         mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
-        mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+
+        if (resString.equals("1")) {
+            mMediaRecorder.setProfile(CamcorderProfile.get(CamcorderProfile.QUALITY_1080P));
+        } else if (resString.equals("2")) {
+            mMediaRecorder.setProfile(CamcorderProfile.get(CamcorderProfile.QUALITY_720P));
+        }
 
         mMediaRecorder.setOutputFile(getNextOutputFile());
         if (qualityString.equals("1")) { //high
@@ -805,18 +800,27 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
             mMediaRecorder.setVideoEncodingBitRate(5000000);
         }
         mMediaRecorder.setMaxDuration(1000 * 60 * durationInMinutes);
+        mMediaRecorder.setMaxDuration(10000);
         mMediaRecorder.setOnInfoListener(new MediaRecorder.OnInfoListener() {
             @Override
             public void onInfo(MediaRecorder mr, int what, int extra) {
                 if (what == MediaRecorder.MEDIA_RECORDER_INFO_MAX_DURATION_REACHED) {
-                    saveTempVideoAndStartRecordingAgain();
+                    AsyncTask.execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            saveTempVideos();
+                        }
+                    });
+                    if (mIsRecordingVideo) { //user might have stopped recording
+                        mIsRecordingVideo = false;
+                        mMediaRecorder.stop();
+                        mMediaRecorder.reset();
+                        startRecordingVideo();
+                    }
                 }
             }
         });
         mMediaRecorder.setVideoFrameRate(Integer.valueOf(sharedPref.getString(SettingsFragment.KEY_FPS, "30")));
-        mMediaRecorder.setVideoSize(mVideoSize.getWidth(), mVideoSize.getHeight());
-        mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
-        mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
         int rotation = activity.getWindowManager().getDefaultDisplay().getRotation();
         switch (mSensorOrientation) {
             case SENSOR_ORIENTATION_DEFAULT_DEGREES:
@@ -835,6 +839,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
     }
 
     private void startRecordingVideo() {
+        mIsRecordingVideo = true;
         if (null == mCameraDevice || !mTextureView.isAvailable() || null == mPreviewSize) {
             return;
         }
@@ -870,7 +875,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
                         public void run() {
                             // UI
                             recordImage.setImageDrawable(getResources().getDrawable(R.drawable.ic_stop_white_24dp));
-                            mIsRecordingVideo = true;
 
                             // Start recording
                             mMediaRecorder.start();
@@ -900,11 +904,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
     }
 
 
-    private void saveTempVideoAndStartRecordingAgain() {
-        mIsRecordingVideo = false;
-        mMediaRecorder.stop();
-        mMediaRecorder.reset();
-
+    private void saveTempVideos() {
         //delete temp2
         File temp2 = new File(StorageHelper.getPublicAlbumStorageDirFile() + TEMP2);
         temp2.delete();
@@ -913,11 +913,12 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
         File temp1 = new File(StorageHelper.getPublicAlbumStorageDirFile() + TEMP1);
         FileHelper.rename(temp1, temp2);
 
-        startRecordingVideo();
     }
 
 
     private void stopRecordingVideo() {
+        if (!mIsRecordingVideo)
+            return;
         // UI
         mIsRecordingVideo = false;
         recordImage.setImageDrawable(getResources().getDrawable(R.drawable.ic_fiber_manual_record_red_24dp));

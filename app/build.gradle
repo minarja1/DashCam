@@ -68,4 +68,6 @@ dependencies {
     implementation 'com.android.support:preference-v14:27.1.1'
 
     implementation 'com.googlecode.mp4parser:isoparser:1.1.21'
+
+
 }

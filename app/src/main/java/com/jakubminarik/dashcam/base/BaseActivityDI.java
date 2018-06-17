@@ -3,6 +3,7 @@ package com.jakubminarik.dashcam.base;
 import android.content.Context;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
+import android.widget.Button;
 
 import butterknife.ButterKnife;
 import dagger.android.AndroidInjection;

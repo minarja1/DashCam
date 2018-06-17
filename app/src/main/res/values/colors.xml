@@ -17,5 +17,6 @@
     <color name="primaryTransparent">#804CAF50</color>
     <color name="greyTransparent">#65000006</color>
 
+    <color name="greenTransparent">#5000AA06</color>
 
 </resources>

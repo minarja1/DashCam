@@ -13,6 +13,9 @@ public class SettingsFragment extends PreferenceFragment {
     public static final String KEY_FPS = "frameRate";
     public static final String KEY_RESOLUTION = "resolution";
     public static final String KEY_DURATION = "duration";
+    public static final String KEY_TRACKING = "tracking";
+    public static final String KEY_MAP_SIZE = "mapSize";
+    public static final String KEY_SHOW_MAP = "showMap";
 
     SharedPreferences.OnSharedPreferenceChangeListener listener;
 

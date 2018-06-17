@@ -116,7 +116,6 @@
                 android:layout_alignParentStart="true"
                 android:layout_centerVertical="true"
                 android:layout_marginStart="20dp"
-                android:text="Veverkova 1343, Hradec Králové, CZ"
                 android:textColor="@color/colorText" />
 
 
@@ -124,34 +123,30 @@
                 android:id="@+id/speedTextView"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="@color/colorText"
                 android:layout_centerVertical="true"
-                android:text="45 km/h"
                 android:layout_toLeftOf="@id/refreshImageView"
-                />
+                android:textColor="@color/colorText" />
 
             <ImageView
                 android:id="@+id/refreshImageView"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_centerVertical="true"
+                android:layout_toLeftOf="@id/durationTextView"
                 android:paddingEnd="4dp"
                 android:paddingStart="20dp"
-                android:layout_centerVertical="true"
-                android:src="@drawable/ic_refresh_white_24dp"
-                android:layout_toLeftOf="@id/durationTextView"/>
+                android:src="@drawable/ic_refresh_white_24dp" />
 
             <TextView
                 android:id="@+id/durationTextView"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:paddingEnd="20dp"
                 android:layout_alignParentEnd="true"
                 android:layout_centerVertical="true"
-                android:text="5 minutes"
+                android:paddingEnd="20dp"
                 android:textColor="@color/colorText" />
 
         </RelativeLayout>
-
 
 
     </FrameLayout>
