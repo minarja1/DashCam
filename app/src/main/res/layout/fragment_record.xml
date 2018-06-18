@@ -66,22 +66,7 @@
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1">
-
-            <ImageButton
-                android:id="@+id/mapButton"
-                style="@android:style/Widget.Material.Light.Button.Borderless"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_centerInParent="true"
-                android:contentDescription="@string/description_info"
-                android:src="@drawable/ic_map_white_24dp" />
-        </RelativeLayout>
-
-        <RelativeLayout
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1">
+            android:layout_weight="2">
 
             <ImageButton
                 android:id="@+id/infoButton"

@@ -58,6 +58,7 @@ import com.googlecode.mp4parser.authoring.builder.DefaultMp4Builder;
 import com.googlecode.mp4parser.authoring.container.mp4.MovieCreator;
 import com.googlecode.mp4parser.authoring.tracks.AppendTrack;
 import com.jakubminarik.dashcam.R;
+import com.jakubminarik.dashcam.about.AboutActivity;
 import com.jakubminarik.dashcam.helper.FileHelper;
 import com.jakubminarik.dashcam.helper.StorageHelper;
 import com.jakubminarik.dashcam.model.Video;
@@ -351,6 +352,9 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
             });
         }
 
+        if (addresses.size() == 0) {
+            return;
+        }
         String fullAddress = addresses.get(0).getAddressLine(0); // If any additional address line present than only, check with max available address lines by getMaxAddressLineIndex()
         Address address = addresses.get(0);
         String city = address.getLocality();
@@ -472,10 +476,8 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
             case R.id.infoButton: {
                 Activity activity = getActivity();
                 if (null != activity) {
-                    new AlertDialog.Builder(activity)
-                            .setMessage(R.string.intro_message)
-                            .setPositiveButton(android.R.string.ok, null)
-                            .show();
+                    Intent intent = new Intent(getActivity(), AboutActivity.class);
+                    startActivity(intent);
                 }
                 break;
             }

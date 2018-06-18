@@ -50,7 +50,7 @@ public class AboutActivity extends BaseActivityDI implements AboutActivityView {
         String[] TO = {"jakub.minarik.11@gmail.com"};
         Intent emailIntent = new Intent(Intent.ACTION_SEND);
         emailIntent.setData(Uri.parse("mailto:"));
-        emailIntent.setType("text/plain");
+        emailIntent.setType("text/emailIntent");
         emailIntent.putExtra(Intent.EXTRA_EMAIL, TO);
         emailIntent.putExtra(Intent.EXTRA_SUBJECT, "DashCam feedback");
 

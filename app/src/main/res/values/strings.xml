@@ -177,4 +177,9 @@
     <string name="from">From</string>
     <string name="to">To</string>
     <string name="play_video">Play video</string>
+    <string name="about_dashcam">About DashCam</string>
+    <string name="about_app">
+        DashCam is an application that allows you to record everything that happens in front of you on the road.\n\nYou never know what happens on the road, so it is always smart to have a black box.\n\nRecording is limited to a certain length (you can change the duration in Settings), so do not forget to save the recording if any worth-saving moment occurs.\n\n\nDeveloped by Jakub Minařík.
+    </string>
+    <string name="contact_dev">Contact developer</string>
 </resources>
