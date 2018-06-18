@@ -271,6 +271,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
     private SharedPreferences sharedPref;
     private boolean kph;
     private int durationInMinutes;
+    private long videoStarted;
 
     public static RecordFragment newInstance() {
         return new RecordFragment();
@@ -290,6 +291,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
         super.onCreate(savedInstanceState);
         geocoder = new Geocoder(getActivity(), Locale.getDefault());
         sharedPref = PreferenceManager.getDefaultSharedPreferences(getActivity());
+        setRetainInstance(true);
     }
 
     private void requestPermissionsLocation() {
@@ -341,7 +343,12 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
             addresses = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1); // Here 1 represent max location result to returned, by documents it recommended 1 to 5
         } catch (IOException e) {
             e.printStackTrace();
-            addressTextView.setText(getResources().getString(R.string.address_unavailable));
+            getActivity().runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    addressTextView.setText(getResources().getString(R.string.address_unavailable));
+                }
+            });
         }
 
         String fullAddress = addresses.get(0).getAddressLine(0); // If any additional address line present than only, check with max available address lines by getMaxAddressLineIndex()
@@ -355,7 +362,9 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
         String knownName = address.getFeatureName(); // ČP
 
         List<String> toDisplay = new ArrayList<>();
-        toDisplay.add(street);
+        if (street != null && !street.isEmpty()) {
+            toDisplay.add(street);
+        }
         toDisplay.add(city);
         toDisplay.add(countryCode);
 
@@ -437,14 +446,6 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
         }
 
         durationTextView.setText(String.format("%s %s", durationInMinutes, getResources().getString(R.string.minutes)));
-    }
-
-    @Override
-    public void onPause() {
-        //podle me neni treba v onPause zastavovat, chtelo by to testera :)
-//        closeCamera();
-//        stopBackgroundThread();
-        super.onPause();
     }
 
     @Override
@@ -842,6 +843,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
     }
 
     private void startRecordingVideo() {
+        videoStarted = System.currentTimeMillis();
         mIsRecordingVideo = true;
         if (null == mCameraDevice || !mTextureView.isAvailable() || null == mPreviewSize) {
             return;
@@ -921,7 +923,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
 
     private void stopRecordingVideo() {
         onSavingVideo();
-        if (!mIsRecordingVideo){
+        if (!mIsRecordingVideo) {
             onVideoSaved();
             return;
         }
@@ -1007,6 +1009,7 @@ public class RecordFragment extends Fragment implements View.OnClickListener, Fr
         video.setPathToFile(mNextVideoAbsolutePath);
         video.setName(mNextVideoAbsolutePath.substring(mNextVideoAbsolutePath.lastIndexOf("/") + 1));
         video.setTimestamp(new Date(System.currentTimeMillis()));
+        video.setLength(System.currentTimeMillis() - videoStarted);
         video.save();
         RecordActivity activity = (RecordActivity) getActivity();
         if (activity != null) {

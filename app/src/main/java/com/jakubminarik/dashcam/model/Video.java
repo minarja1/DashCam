@@ -22,11 +22,23 @@ public class Video extends BaseModel {
     private String pathToFile;
 
     @Column
-    private String pathToImage;
+    private Date timestamp;
 
     @Column
     @Nullable
-    private Date timestamp;
+    private String pathToImage;
+
+    @Column
+    private long length;
+
+    @Column
+    @Nullable
+    private String tripStartAddress;
+
+    @Column
+    @Nullable
+    private String tripEndAddress;
+
 
     public int getId() {
         return id;
@@ -67,5 +79,31 @@ public class Video extends BaseModel {
 
     public void setPathToImage(String pathToImage) {
         this.pathToImage = pathToImage;
+    }
+
+    public long getLength() {
+        return length;
+    }
+
+    public void setLength(long length) {
+        this.length = length;
+    }
+
+    @Nullable
+    public String getTripStartAddress() {
+        return tripStartAddress;
+    }
+
+    public void setTripStartAddress(String tripStartAddress) {
+        this.tripStartAddress = tripStartAddress;
+    }
+
+    @Nullable
+    public String getTripEndAddress() {
+        return tripEndAddress;
+    }
+
+    public void setTripEndAddress(String tripEndAddress) {
+        this.tripEndAddress = tripEndAddress;
     }
 }

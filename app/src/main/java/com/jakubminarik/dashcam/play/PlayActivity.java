@@ -18,14 +18,19 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.DatePicker;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import com.bumptech.glide.Glide;
 import com.jakubminarik.dashcam.R;
 import com.jakubminarik.dashcam.base.BaseActivityDI;
 import com.jakubminarik.dashcam.base.BasePresenter;
+import com.jakubminarik.dashcam.base.Constants;
 import com.jakubminarik.dashcam.model.Video;
+import com.jakubminarik.dashcam.video_detail.VideoDetailActivity;
 
+import java.io.File;
 import java.lang.ref.WeakReference;
 import java.text.DateFormat;
 import java.util.Calendar;
@@ -106,7 +111,10 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
 
             @Override
             public void onInfoClicked(int position) {
-//todo
+                Video video = presenter.getVideos().get(position);
+                Intent intent = new Intent(getContext(), VideoDetailActivity.class);
+                intent.putExtra(Constants.ARG_VIDEO_ID, video.getId());
+                startActivity(intent);
             }
 
             @Override
@@ -191,6 +199,15 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
             holder.nameTextView.setText(video.getName());
             DateFormat dateFormat = android.text.format.DateFormat.getDateFormat(getApplicationContext());
             holder.dateTextView.setText(dateFormat.format(video.getTimestamp()));
+
+            if (video.getPathToImage() != null && !video.getPathToImage().isEmpty()) {
+                File imageFile = new File(video.getPathToImage());
+                if (imageFile.exists()) {
+                    Glide.with(getContext()).load(imageFile).into(holder.mapThumbnailImageView);
+                } else {
+                    holder.mapThumbnailImageView.setVisibility(View.GONE);
+                }
+            }
         }
 
 
@@ -210,6 +227,8 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
             ImageButton infoButton;
             @BindView(R.id.itemBackground)
             LinearLayout itemBackground;
+            @BindView(R.id.mapThumbnailImageView)
+            ImageView mapThumbnailImageView;
 
             private WeakReference<VideoClickListener> listenerRef;
 
@@ -221,6 +240,8 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
                 deleteButton.setOnClickListener(this);
                 infoButton.setOnClickListener(this);
                 itemBackground.setOnClickListener(this);
+
+
             }
 
 
@@ -235,8 +256,6 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
                 }
             }
         }
-
-
     }
 
 

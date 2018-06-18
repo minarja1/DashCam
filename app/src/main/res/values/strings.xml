@@ -171,4 +171,10 @@
     <string name="displaying_res">Displaying results for</string>
     <string name="video">Video</string>
     <string name="minutes">minutes</string>
+    <string name="image_not_found">Map image not available</string>
+    <string name="date">Date</string>
+    <string name="trip_duration">Trip duration</string>
+    <string name="from">From</string>
+    <string name="to">To</string>
+    <string name="play_video">Play video</string>
 </resources>

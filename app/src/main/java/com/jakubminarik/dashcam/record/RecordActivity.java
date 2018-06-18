@@ -6,6 +6,8 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.location.Address;
+import android.location.Geocoder;
 import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
@@ -54,6 +56,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.List;
+import java.util.Locale;
 
 import javax.inject.Inject;
 
@@ -222,12 +225,20 @@ public class RecordActivity extends BaseActivityDI implements RecordActivityView
             }
             lastTime = System.currentTimeMillis();
 
-
             List<Location> locationList = locationResult.getLocations();
             final RecordFragment fragment = (RecordFragment) getFragmentManager().findFragmentById(R.id.container);
 
             if (locationList.size() > 0) {
                 final Location location = locationList.get(locationList.size() - 1);
+//                final Location location;
+//                if (mLastLocation != null) {
+//                    location = new Location(mLastLocation);
+//                    location.setLongitude(location.getLongitude() + 0.001);
+//                    location.setLatitude(location.getLatitude() + 0.001);
+//                } else {
+//                    location = locationList.get(locationList.size() - 1);
+//                }
+
                 if (fragment != null) {
                     fragment.onLocationChanged(location);
                 }
@@ -236,20 +247,21 @@ public class RecordActivity extends BaseActivityDI implements RecordActivityView
 
                 Log.i("RecordActivity", "Location: " + location.getLatitude() + " " + location.getLongitude());
 
-
-                //move map camera
-
+                //move map camera if tracking, draw line if recording, set start position of recording and no startPostition has been established
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
                         if (tracking) {
                             mGoogleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15));
-                            if (mLastLocation != null) {
-                                mGoogleMap.addPolyline(new PolylineOptions()
-                                        .add(new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude()), latLng)
-                                        .width(5)
-                                        .color(Color.RED));
-                            }
+                        }
+                        if (mLastLocation != null && fragment != null && fragment.ismIsRecordingVideo()) {
+                            PolylineOptions options = new PolylineOptions();
+                            options.color( Color.RED);
+                            options.width( 5 );
+                            options.visible( true );
+                            options.add(new LatLng(mLastLocation.getLatitude(),mLastLocation.getLongitude()));
+                            options.add(latLng);
+                            mGoogleMap.addPolyline(options);
 
                         }
                         if (startLocation == null && fragment != null && fragment.ismIsRecordingVideo()) {
@@ -262,10 +274,10 @@ public class RecordActivity extends BaseActivityDI implements RecordActivityView
                             mCurrLocationMarker = mGoogleMap.addMarker(markerOptions);
                         }
 
+                        mLastLocation = location;
                     }
                 });
 
-                mLastLocation = location;
             }
         }
     };
@@ -306,14 +318,19 @@ public class RecordActivity extends BaseActivityDI implements RecordActivityView
 
 
     /**
+     * Moves camera to suitable position and when the map is loaded, takes a snapshot.
+     *
      * @param videoId
      * @return String path to mapImage file
      */
-    public void onVideoStopped(int videoId) {
+    public void onVideoStopped(final int videoId) {
         if (startLocation == null) {
             return;
         }
-        LatLng endLatLng = new LatLng(50, 60);
+        if (mFusedLocationClient != null) {
+            mFusedLocationClient.removeLocationUpdates(mLocationCallback);
+        }
+        LatLng endLatLng = new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude());
         MarkerOptions markerOptions = new MarkerOptions();
         markerOptions.position(endLatLng);
         markerOptions.title("End");
@@ -324,25 +341,36 @@ public class RecordActivity extends BaseActivityDI implements RecordActivityView
         builder.include(new LatLng(startLocation.getLatitude(), startLocation.getLongitude()));
         builder.include(endLatLng);
 
-        mGoogleMap.moveCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 50));
+        mGoogleMap.moveCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 100));
 
-        captureAndSaveMapImage(videoId);
+        mGoogleMap.setOnMapLoadedCallback(new GoogleMap.OnMapLoadedCallback() {
+            @Override
+            public void onMapLoaded() {
+                captureAndSaveMapImage(videoId);
+            }
+        });
+
     }
 
+    //saves snapshot of map
+    @SuppressWarnings("MissingPermission")
     private void captureAndSaveMapImage(final int videoId) {
-        GoogleMap.SnapshotReadyCallback callback = new GoogleMap.SnapshotReadyCallback() {
+        final GoogleMap.SnapshotReadyCallback callback = new GoogleMap.SnapshotReadyCallback() {
             Bitmap bitmap = null;
 
             @Override
             public void onSnapshotReady(Bitmap snapshot) {
                 bitmap = snapshot;
-                mLastLocation = null;
-                startLocation = null;
-                mGoogleMap.clear();
                 try {
                     saveImageToVideo(bitmap, videoId);
                 } catch (Exception e) {
                     e.printStackTrace();
+                }
+                mLastLocation = null;
+                startLocation = null;
+                mGoogleMap.clear();
+                if (mFusedLocationClient != null) {
+                    requestLocationUpdates();
                 }
             }
 
@@ -350,6 +378,7 @@ public class RecordActivity extends BaseActivityDI implements RecordActivityView
         mGoogleMap.snapshot(callback);
     }
 
+    //saves image as File and creates reference with Video
     private void saveImageToVideo(Bitmap bitmap, int videoId) throws IOException {
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         bitmap.compress(Bitmap.CompressFormat.JPEG, 90, bytes);
@@ -359,11 +388,23 @@ public class RecordActivity extends BaseActivityDI implements RecordActivityView
         fo.write(bytes.toByteArray());
         fo.close();
 
+
         Video video = VideoDAO.findById(videoId);
+        List<Address> addresses;
+        Geocoder geocoder = new Geocoder(this, Locale.getDefault());
+        if (startLocation != null) {
+            addresses = geocoder.getFromLocation(startLocation.getLatitude(), startLocation.getLongitude(), 1);
+            String fullAddress = addresses.get(0).getAddressLine(0);
+            video.setTripStartAddress(fullAddress);
+        }
+        if (mLastLocation != null) {
+            addresses = geocoder.getFromLocation(mLastLocation.getLatitude(), mLastLocation.getLongitude(), 1);
+            String fullAddress = addresses.get(0).getAddressLine(0);
+            video.setTripEndAddress(fullAddress);
+        }
+
         video.setPathToImage(f.getAbsolutePath());
         video.save();
-
-        VideoDAO.getAllVideos();
 
     }
 
@@ -413,6 +454,8 @@ public class RecordActivity extends BaseActivityDI implements RecordActivityView
         SharedPreferences.Editor editor = sharedPref.edit();
         largeMap = !largeMap;
         editor.putBoolean(KEY_MAP_SIZE, largeMap);
+        fullScreen = false;
+        editor.putBoolean(KEY_MAP_FULLSCREEN, fullScreen);
         editor.apply();
         resizeMap();
     }
@@ -426,7 +469,11 @@ public class RecordActivity extends BaseActivityDI implements RecordActivityView
         mapLayout.setVisibility(showMap ? View.VISIBLE : View.GONE);
         buttonsBackground.setVisibility(showMap ? View.VISIBLE : View.GONE);
         reopenMapButton.setVisibility(!showMap ? View.VISIBLE : View.GONE);
-        cameraViewsContainer.setVisibility(!showMap ? View.VISIBLE : View.GONE);
+        if (!showMap) {
+            cameraViewsContainer.setVisibility(View.VISIBLE);
+        } else if (showMap && fullScreen) {
+            cameraViewsContainer.setVisibility(View.GONE);
+        }
     }
 
     @OnClick(R.id.reopenMapButton)
