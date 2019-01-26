@@ -10,7 +10,7 @@
 
     <string name="stop">Stop</string>
     <string name="description_info">Info</string>
-    <string name="permission_request">This app c needs permission for camera and audio recording.</string>
+    <string name="permission_request">This application can not function without permission for storage access and camera and audio recording. Please accept permissions.</string>
     <string name="camera_error">This device doesn\'t support Camera2 API.</string>
 
     <string name="intro_message">

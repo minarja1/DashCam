@@ -73,12 +73,12 @@ public class RecordActivity extends BaseActivityDI implements RecordActivityView
     @Inject
     RecordActivityPresenter presenter;
 
-    GoogleMap mGoogleMap;
+    GoogleMap googleMap;
     SupportMapFragment mapFrag;
-    LocationRequest mLocationRequest;
-    Location mLastLocation;
-    Marker mCurrLocationMarker;
-    FusedLocationProviderClient mFusedLocationClient;
+    LocationRequest locationRequest;
+    Location lastLocation;
+    Marker currLocationMarker;
+    FusedLocationProviderClient fusedLocationClient;
     private SharedPreferences sharedPref;
     private boolean tracking;
     private boolean largeMap;
@@ -92,7 +92,7 @@ public class RecordActivity extends BaseActivityDI implements RecordActivityView
 
     private static int UPDATE_INTERVAL = 1000;//1 sec
 
-    public static final int MY_PERMISSIONS_REQUEST_LOCATION = 99;
+    public static final int PERMISSIONS_REQUEST_LOCATION = 99;
 
     @BindView(R.id.trackPositionButton)
     ImageButton trackPositionButton;
@@ -106,6 +106,63 @@ public class RecordActivity extends BaseActivityDI implements RecordActivityView
     LinearLayout cameraViewsContainer;
 
     private HandlerThread handlerThread;
+
+    LocationCallback locationCallback = new LocationCallback() {
+        @Override
+        public void onLocationResult(LocationResult locationResult) {
+            if (lastTime > 0) {
+                long difference = System.currentTimeMillis() - lastTime;
+                Log.i("RecordActivity", "Time elapsed: " + difference / 1000);
+            }
+            lastTime = System.currentTimeMillis();
+
+            List<Location> locationList = locationResult.getLocations();
+            final RecordFragment fragment = (RecordFragment) getFragmentManager().findFragmentById(R.id.container);
+
+            if (locationList.size() > 0) {
+                final Location location = locationList.get(locationList.size() - 1);
+                if (fragment != null) {
+                    fragment.onLocationChanged(location);
+                }
+
+                final LatLng currentLatLng = new LatLng(location.getLatitude(), location.getLongitude());
+
+                Log.i("RecordActivity", "Location: " + location.getLatitude() + " " + location.getLongitude());
+
+                //move map camera if tracking, draw line if recording, set start position if recording and no startPostition has been established
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (tracking) {
+                            googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLatLng, 30));
+                        }
+                        if (lastLocation != null && fragment != null && fragment.isRecordingVideo()) {
+                            PolylineOptions options = new PolylineOptions();
+                            options.color(Color.RED);
+                            options.width(5);
+                            options.visible(true);
+                            options.add(new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude()));
+                            options.add(currentLatLng);
+                            googleMap.addPolyline(options);
+
+                        }
+                        if (startLocation == null && fragment != null && fragment.isRecordingVideo()) {
+                            startLocation = location;
+
+                            MarkerOptions markerOptions = new MarkerOptions();
+                            markerOptions.position(currentLatLng);
+                            markerOptions.title("Start");
+                            markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_MAGENTA));
+                            currLocationMarker = googleMap.addMarker(markerOptions);
+                        }
+
+                        lastLocation = location;
+                    }
+                });
+
+            }
+        }
+    };
 
     @Override
     public BasePresenter getPresenter() {
@@ -123,11 +180,10 @@ public class RecordActivity extends BaseActivityDI implements RecordActivityView
                     .commit();
         }
         if (savedInstanceState != null && savedInstanceState.containsKey(Constants.ARG_START_LOCATION)) {
-            startLocation =
-                    savedInstanceState.getParcelable(Constants.ARG_START_LOCATION);
+            startLocation = savedInstanceState.getParcelable(Constants.ARG_START_LOCATION);
         }
 
-        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
         mapFrag = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         mapFrag.getMapAsync(this);
@@ -149,15 +205,15 @@ public class RecordActivity extends BaseActivityDI implements RecordActivityView
     public void onStop() {
         super.onStop();
         //stop location updates when Activity is no longer active
-        if (mFusedLocationClient != null) {
-            mFusedLocationClient.removeLocationUpdates(mLocationCallback);
+        if (fusedLocationClient != null) {
+            fusedLocationClient.removeLocationUpdates(locationCallback);
         }
     }
 
     @Override
     protected void onStart() {
         super.onStart();
-        if (mFusedLocationClient != null && mGoogleMap != null) {
+        if (fusedLocationClient != null && googleMap != null) {
             requestLocationUpdates();
         }
     }
@@ -170,21 +226,21 @@ public class RecordActivity extends BaseActivityDI implements RecordActivityView
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
-        mGoogleMap = googleMap;
-        mGoogleMap.setMapType(GoogleMap.MAP_TYPE_HYBRID);
-        mGoogleMap.setTrafficEnabled(true);
+        this.googleMap = googleMap;
+        this.googleMap.setMapType(GoogleMap.MAP_TYPE_HYBRID);
+        this.googleMap.setTrafficEnabled(true);
 
-        mLocationRequest = LocationRequest.create();
-        mLocationRequest.setInterval(UPDATE_INTERVAL);
-        mLocationRequest.setFastestInterval(500);
-        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        mGoogleMap.getUiSettings().setScrollGesturesEnabled(!tracking);
-        mGoogleMap.getUiSettings().setZoomControlsEnabled(!tracking);
-        mGoogleMap.getUiSettings().setMapToolbarEnabled(true);
+        locationRequest = LocationRequest.create();
+        locationRequest.setInterval(UPDATE_INTERVAL);
+        locationRequest.setFastestInterval(500);
+        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        this.googleMap.getUiSettings().setScrollGesturesEnabled(!tracking);
+        this.googleMap.getUiSettings().setZoomControlsEnabled(!tracking);
+        this.googleMap.getUiSettings().setMapToolbarEnabled(true);
 
         // Create LocationSettingsRequest object using location request
         LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder();
-        builder.addLocationRequest(mLocationRequest);
+        builder.addLocationRequest(locationRequest);
         LocationSettingsRequest locationSettingsRequest = builder.build();
 
         // Check whether location settings are satisfied
@@ -197,125 +253,20 @@ public class RecordActivity extends BaseActivityDI implements RecordActivityView
     }
 
     private void requestLocationUpdates() {
-
         if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (ContextCompat.checkSelfPermission(this,
-                    Manifest.permission.ACCESS_FINE_LOCATION)
-                    == PackageManager.PERMISSION_GRANTED) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
                 //Location Permission already granted
-                mFusedLocationClient.requestLocationUpdates(mLocationRequest, mLocationCallback, handlerThread.getLooper());
-                mGoogleMap.setMyLocationEnabled(true);
+                fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, handlerThread.getLooper());
+                googleMap.setMyLocationEnabled(true);
             } else {
                 //Request Location Permission
                 checkLocationPermission();
             }
         } else {
-
-            mFusedLocationClient.requestLocationUpdates(mLocationRequest, mLocationCallback, handlerThread.getLooper());
-            mGoogleMap.setMyLocationEnabled(true);
+            fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, handlerThread.getLooper());
+            googleMap.setMyLocationEnabled(true);
         }
     }
-
-    LocationCallback mLocationCallback = new LocationCallback() {
-        @Override
-        public void onLocationResult(LocationResult locationResult) {
-            if (lastTime > 0) {
-                long difference = System.currentTimeMillis() - lastTime;
-                Log.i("RecordActivity", "Time elapsed: " + difference / 1000);
-            }
-            lastTime = System.currentTimeMillis();
-
-            List<Location> locationList = locationResult.getLocations();
-            final RecordFragment fragment = (RecordFragment) getFragmentManager().findFragmentById(R.id.container);
-
-            if (locationList.size() > 0) {
-                final Location location = locationList.get(locationList.size() - 1);
-//                final Location location;
-//                if (mLastLocation != null) {
-//                    location = new Location(mLastLocation);
-//                    location.setLongitude(location.getLongitude() + 0.001);
-//                    location.setLatitude(location.getLatitude() + 0.001);
-//                } else {
-//                    location = locationList.get(locationList.size() - 1);
-//                }
-
-                if (fragment != null) {
-                    fragment.onLocationChanged(location);
-                }
-
-                final LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
-
-                Log.i("RecordActivity", "Location: " + location.getLatitude() + " " + location.getLongitude());
-
-                //move map camera if tracking, draw line if recording, set start position of recording and no startPostition has been established
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (tracking) {
-                            mGoogleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15));
-                        }
-                        if (mLastLocation != null && fragment != null && fragment.ismIsRecordingVideo()) {
-                            PolylineOptions options = new PolylineOptions();
-                            options.color( Color.RED);
-                            options.width( 5 );
-                            options.visible( true );
-                            options.add(new LatLng(mLastLocation.getLatitude(),mLastLocation.getLongitude()));
-                            options.add(latLng);
-                            mGoogleMap.addPolyline(options);
-
-                        }
-                        if (startLocation == null && fragment != null && fragment.ismIsRecordingVideo()) {
-                            startLocation = location;
-
-                            MarkerOptions markerOptions = new MarkerOptions();
-                            markerOptions.position(latLng);
-                            markerOptions.title("Start");
-                            markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_MAGENTA));
-                            mCurrLocationMarker = mGoogleMap.addMarker(markerOptions);
-                        }
-
-                        mLastLocation = location;
-                    }
-                });
-
-            }
-        }
-    };
-
-    private void checkLocationPermission() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED) {
-
-            // Should we show an explanation?
-            if (!ActivityCompat.shouldShowRequestPermissionRationale(this,
-                    Manifest.permission.ACCESS_FINE_LOCATION)) {
-                // No explanation needed, we can request the permission.
-                ActivityCompat.requestPermissions(this,
-                        new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                        MY_PERMISSIONS_REQUEST_LOCATION);
-            } else {
-
-                // Show an explanation to the user *asynchronously* -- don't block
-                // this thread waiting for the user's response! After the user
-                // sees the explanation, try again to request the permission.
-                new AlertDialog.Builder(this)
-                        .setTitle("Location Permission Needed")
-                        .setMessage("This app needs the Location permission, please accept to use location functionality")
-                        .setPositiveButton("OK", new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialogInterface, int i) {
-                                //Prompt the user once explanation has been shown
-                                ActivityCompat.requestPermissions(RecordActivity.this,
-                                        new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                                        MY_PERMISSIONS_REQUEST_LOCATION);
-                            }
-                        })
-                        .create()
-                        .show();
-            }
-        }
-    }
-
 
     /**
      * Moves camera to suitable position and when the map is loaded, takes a snapshot.
@@ -327,23 +278,23 @@ public class RecordActivity extends BaseActivityDI implements RecordActivityView
         if (startLocation == null) {
             return;
         }
-        if (mFusedLocationClient != null) {
-            mFusedLocationClient.removeLocationUpdates(mLocationCallback);
+        if (fusedLocationClient != null) {
+            fusedLocationClient.removeLocationUpdates(locationCallback);
         }
-        LatLng endLatLng = new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude());
+        LatLng endLatLng = new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude());
         MarkerOptions markerOptions = new MarkerOptions();
         markerOptions.position(endLatLng);
         markerOptions.title("End");
         markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_MAGENTA));
-        mCurrLocationMarker = mGoogleMap.addMarker(markerOptions);
+        currLocationMarker = googleMap.addMarker(markerOptions);
 
         LatLngBounds.Builder builder = LatLngBounds.builder();
         builder.include(new LatLng(startLocation.getLatitude(), startLocation.getLongitude()));
         builder.include(endLatLng);
 
-        mGoogleMap.moveCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 100));
+        googleMap.moveCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 100));
 
-        mGoogleMap.setOnMapLoadedCallback(new GoogleMap.OnMapLoadedCallback() {
+        googleMap.setOnMapLoadedCallback(new GoogleMap.OnMapLoadedCallback() {
             @Override
             public void onMapLoaded() {
                 captureAndSaveMapImage(videoId);
@@ -366,16 +317,16 @@ public class RecordActivity extends BaseActivityDI implements RecordActivityView
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-                mLastLocation = null;
+                lastLocation = null;
                 startLocation = null;
-                mGoogleMap.clear();
-                if (mFusedLocationClient != null) {
+                googleMap.clear();
+                if (fusedLocationClient != null) {
                     requestLocationUpdates();
                 }
             }
 
         };
-        mGoogleMap.snapshot(callback);
+        googleMap.snapshot(callback);
     }
 
     //saves image as File and creates reference with Video
@@ -397,8 +348,8 @@ public class RecordActivity extends BaseActivityDI implements RecordActivityView
             String fullAddress = addresses.get(0).getAddressLine(0);
             video.setTripStartAddress(fullAddress);
         }
-        if (mLastLocation != null) {
-            addresses = geocoder.getFromLocation(mLastLocation.getLatitude(), mLastLocation.getLongitude(), 1);
+        if (lastLocation != null) {
+            addresses = geocoder.getFromLocation(lastLocation.getLatitude(), lastLocation.getLongitude(), 1);
             String fullAddress = addresses.get(0).getAddressLine(0);
             video.setTripEndAddress(fullAddress);
         }
@@ -408,44 +359,14 @@ public class RecordActivity extends BaseActivityDI implements RecordActivityView
 
     }
 
-    @Override
-    public void onRequestPermissionsResult(int requestCode,
-                                           String permissions[], int[] grantResults) {
-        switch (requestCode) {
-            case MY_PERMISSIONS_REQUEST_LOCATION: {
-                // If request is cancelled, the result arrays are empty.
-                if (grantResults.length > 0
-                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-
-                    // permission was granted, yay! Do the
-                    // location-related task you need to do.
-                    if (ContextCompat.checkSelfPermission(this,
-                            Manifest.permission.ACCESS_FINE_LOCATION)
-                            == PackageManager.PERMISSION_GRANTED) {
-
-                        mFusedLocationClient.requestLocationUpdates(mLocationRequest, mLocationCallback, handlerThread.getLooper());
-                        mGoogleMap.setMyLocationEnabled(true);
-                    }
-
-                } else {
-
-                    // permission denied, boo! Disable the
-                    // functionality that depends on this permission.
-                    Toast.makeText(this, "permission denied", Toast.LENGTH_LONG).show();
-                }
-                return;
-            }
-        }
-    }
-
     @OnClick(R.id.trackPositionButton)
     void onTrackBtnClicked() {
         SharedPreferences.Editor editor = sharedPref.edit();
         tracking = !tracking;
         editor.putBoolean(KEY_TRACKING, tracking);
         editor.apply();
-        mGoogleMap.getUiSettings().setScrollGesturesEnabled(!tracking);
-        mGoogleMap.getUiSettings().setZoomControlsEnabled(!tracking);
+        googleMap.getUiSettings().setScrollGesturesEnabled(!tracking);
+        googleMap.getUiSettings().setZoomControlsEnabled(!tracking);
         updateButtons();
     }
 
@@ -477,7 +398,7 @@ public class RecordActivity extends BaseActivityDI implements RecordActivityView
     }
 
     @OnClick(R.id.reopenMapButton)
-    void onreopenMapButtonMapButtonClicked() {
+    void onReopenMapButtonMapButtonClicked() {
         onCloseMapButtonClicked();
     }
 
@@ -525,6 +446,52 @@ public class RecordActivity extends BaseActivityDI implements RecordActivityView
             cameraViewsContainer.setVisibility(View.GONE);
         } else {
             resizeMap();
+        }
+    }
+
+    private void checkLocationPermission() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+
+            // Should we show an explanation?
+            if (!ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_FINE_LOCATION)) {
+                // No explanation needed, we can request the permission.
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, PERMISSIONS_REQUEST_LOCATION);
+            } else {
+                // Show an explanation to the user *asynchronously* -- don't block
+                // this thread waiting for the user's response! After the user
+                // sees the explanation, try again to request the permission.
+                new AlertDialog.Builder(this)
+                        .setTitle("Location Permission Needed")
+                        .setMessage("This application needs the Location permission, please accept to use location functionality.")
+                        .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+                                //Prompt the user once explanation has been shown
+                                ActivityCompat.requestPermissions(RecordActivity.this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, PERMISSIONS_REQUEST_LOCATION);
+                            }
+                        })
+                        .create()
+                        .show();
+            }
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        switch (requestCode) {
+            case PERMISSIONS_REQUEST_LOCATION: {
+                // If request is cancelled, the result arrays are empty.
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+
+                    if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                        fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, handlerThread.getLooper());
+                        googleMap.setMyLocationEnabled(true);
+                    }
+                } else {
+                    Toast.makeText(this, "permission denied", Toast.LENGTH_LONG).show();
+                }
+            }
         }
     }
 

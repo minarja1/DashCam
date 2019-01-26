@@ -2,6 +2,7 @@ package com.jakubminarik.dashcam;
 
 import android.app.Activity;
 import android.app.Application;
+import android.content.Context;
 
 import com.raizlabs.android.dbflow.config.FlowConfig;
 import com.raizlabs.android.dbflow.config.FlowLog;
@@ -17,6 +18,8 @@ public class DashCamApplication extends Application implements HasActivityInject
     @Inject
     DispatchingAndroidInjector<Activity> dispatchingAndroidInjector;
 
+    private static Context context;
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -24,6 +27,11 @@ public class DashCamApplication extends Application implements HasActivityInject
         FlowManager.init(new FlowConfig.Builder(this).build());
         // add for verbose logging
         FlowLog.setMinimumLoggingLevel(FlowLog.Level.V);
+        context = getApplicationContext();
+    }
+
+    public static Context getContext() {
+        return context;
     }
 
     @Override
