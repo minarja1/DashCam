@@ -282,25 +282,28 @@ public class RecordActivity extends BaseActivityDI implements RecordActivityView
             fusedLocationClient.removeLocationUpdates(locationCallback);
         }
         LatLng endLatLng = new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude());
-        MarkerOptions markerOptions = new MarkerOptions();
+        final MarkerOptions markerOptions = new MarkerOptions();
         markerOptions.position(endLatLng);
         markerOptions.title("End");
         markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_MAGENTA));
-        currLocationMarker = googleMap.addMarker(markerOptions);
 
-        LatLngBounds.Builder builder = LatLngBounds.builder();
+        final LatLngBounds.Builder builder = LatLngBounds.builder();
         builder.include(new LatLng(startLocation.getLatitude(), startLocation.getLongitude()));
         builder.include(endLatLng);
 
-        googleMap.moveCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 100));
-
-        googleMap.setOnMapLoadedCallback(new GoogleMap.OnMapLoadedCallback() {
+        runOnUiThread(new Runnable() {
             @Override
-            public void onMapLoaded() {
-                captureAndSaveMapImage(videoId);
+            public void run() {
+                currLocationMarker = googleMap.addMarker(markerOptions);
+                googleMap.moveCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 100));
+                googleMap.setOnMapLoadedCallback(new GoogleMap.OnMapLoadedCallback() {
+                    @Override
+                    public void onMapLoaded() {
+                        captureAndSaveMapImage(videoId);
+                    }
+                });
             }
         });
-
     }
 
     //saves snapshot of map

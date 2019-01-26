@@ -61,6 +61,14 @@
                 android:layout_gravity="center"
                 android:src="@drawable/ic_fiber_manual_record_red_24dp" />
 
+            <ProgressBar
+                android:id="@+id/progressBar"
+                android:layout_centerInParent="true"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:visibility="gone"
+                android:layout_gravity="center" />
+
         </RelativeLayout>
 
         <RelativeLayout
@@ -84,8 +92,8 @@
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="30dp"
-        android:layout_alignParentBottom="true"
         android:layout_alignParentStart="true"
+        android:layout_alignParentBottom="true"
         android:layout_toStartOf="@+id/right_side"
         android:background="@color/greyTransparent"
         android:orientation="horizontal">
@@ -118,8 +126,8 @@
                 android:layout_height="wrap_content"
                 android:layout_centerVertical="true"
                 android:layout_toLeftOf="@id/durationTextView"
-                android:paddingEnd="4dp"
                 android:paddingStart="20dp"
+                android:paddingEnd="4dp"
                 android:src="@drawable/ic_refresh_white_24dp" />
 
             <TextView

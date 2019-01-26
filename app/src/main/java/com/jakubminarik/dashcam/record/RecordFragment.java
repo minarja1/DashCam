@@ -45,15 +45,10 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.googlecode.mp4parser.BasicContainer;
-import com.googlecode.mp4parser.authoring.Movie;
-import com.googlecode.mp4parser.authoring.Track;
-import com.googlecode.mp4parser.authoring.builder.DefaultMp4Builder;
-import com.googlecode.mp4parser.authoring.container.mp4.MovieCreator;
-import com.googlecode.mp4parser.authoring.tracks.AppendTrack;
 import com.jakubminarik.dashcam.R;
 import com.jakubminarik.dashcam.about.AboutActivity;
 import com.jakubminarik.dashcam.helper.CameraHelper;
@@ -62,6 +57,7 @@ import com.jakubminarik.dashcam.helper.FileHelper;
 import com.jakubminarik.dashcam.helper.LocationHelper;
 import com.jakubminarik.dashcam.helper.SharedPrefHelper;
 import com.jakubminarik.dashcam.helper.StorageHelper;
+import com.jakubminarik.dashcam.helper.ViewHelper;
 import com.jakubminarik.dashcam.model.Video;
 import com.jakubminarik.dashcam.play.PlayActivity;
 import com.jakubminarik.dashcam.settings.SettingsActivity;
@@ -69,12 +65,9 @@ import com.jakubminarik.dashcam.view.AutoFitTextureView;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.nio.channels.FileChannel;
 import java.sql.Date;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.Semaphore;
@@ -251,6 +244,9 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
 
     @BindView(R.id.videoButton)
     ImageView recordButton;
+
+    @BindView(R.id.progressBar)
+    ProgressBar progressBar;
 
     private Geocoder geocoder;
     private boolean cameraOpened = false;
@@ -594,57 +590,68 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
         if (null == cameraDevice || !textureView.isAvailable() || null == previewSize) {
             return;
         }
-        try {
-            closePreviewSession();
-            setUpMediaRecorder();
-            SurfaceTexture texture = textureView.getSurfaceTexture();
-            assert texture != null;
-            texture.setDefaultBufferSize(previewSize.getWidth(), previewSize.getHeight());
-            previewBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
-            List<Surface> surfaces = new ArrayList<>();
 
-            // Set up Surface for the camera preview
-            Surface previewSurface = new Surface(texture);
-            surfaces.add(previewSurface);
-            previewBuilder.addTarget(previewSurface);
+        AsyncTask.execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    closePreviewSession();
+                    setUpMediaRecorder();
+                    SurfaceTexture texture = textureView.getSurfaceTexture();
+                    assert texture != null;
+                    texture.setDefaultBufferSize(previewSize.getWidth(), previewSize.getHeight());
+                    previewBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
+                    List<Surface> surfaces = new ArrayList<>();
 
-            // Set up Surface for the MediaRecorder
-            Surface recorderSurface = mediaRecorder.getSurface();
-            surfaces.add(recorderSurface);
-            previewBuilder.addTarget(recorderSurface);
+                    // Set up Surface for the camera preview
+                    Surface previewSurface = new Surface(texture);
+                    surfaces.add(previewSurface);
+                    previewBuilder.addTarget(previewSurface);
 
-            // Start a capture session
-            // Once the session starts, we can update the UI and start recording
-            cameraDevice.createCaptureSession(surfaces, new CameraCaptureSession.StateCallback() {
+                    // Set up Surface for the MediaRecorder
+                    Surface recorderSurface = mediaRecorder.getSurface();
+                    surfaces.add(recorderSurface);
+                    previewBuilder.addTarget(recorderSurface);
 
-                @Override
-                public void onConfigured(@NonNull CameraCaptureSession cameraCaptureSession) {
-                    previewSession = cameraCaptureSession;
-                    updatePreview();
-                    getActivity().runOnUiThread(new Runnable() {
+                    // Start a capture session
+                    // Once the session starts, we can update the UI and start recording
+                    cameraDevice.createCaptureSession(surfaces, new CameraCaptureSession.StateCallback() {
                         @Override
-                        public void run() {
-                            // UI
-                            recordButton.setImageDrawable(getResources().getDrawable(R.drawable.ic_stop_white_24dp));
+                        public void onConfigured(@NonNull CameraCaptureSession cameraCaptureSession) {
+                            previewSession = cameraCaptureSession;
+                            updatePreview();
+                            getActivity().runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    // UI
+                                    getActivity().runOnUiThread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            ViewHelper.ImageViewAnimatedChange(getContext(), recordButton, getResources().getDrawable(R.drawable.ic_stop_white_24dp, null));
+                                        }
+                                    });
 
-                            // Start recording
-                            mediaRecorder.start();
+                                    // Start recording
+                                    mediaRecorder.start();
+                                }
+                            });
                         }
-                    });
-                }
 
-                @Override
-                public void onConfigureFailed(@NonNull CameraCaptureSession cameraCaptureSession) {
-                    Activity activity = getActivity();
-                    if (null != activity) {
-                        Toast.makeText(activity, "Failed", Toast.LENGTH_SHORT).show();
-                    }
+                        @Override
+                        public void onConfigureFailed(@NonNull CameraCaptureSession cameraCaptureSession) {
+                            Activity activity = getActivity();
+                            if (null != activity) {
+                                Toast.makeText(activity, "Failed", Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                    }, backgroundHandler);
+                } catch (CameraAccessException | IOException e) {
+                    e.printStackTrace();
                 }
-            }, backgroundHandler);
-        } catch (CameraAccessException | IOException e) {
-            e.printStackTrace();
-        }
+            }
 
+
+        });
     }
 
     private void closePreviewSession() {
@@ -655,27 +662,8 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
     }
 
     private void stopRecordingAndSaveVideo() {
-        onSavingVideo();
-        if (!isRecordingVideo) {
-            onVideoSaved();
-            return;
-        }
-        // UI
-        isRecordingVideo = false;
-        recordButton.setImageDrawable(getResources().getDrawable(R.drawable.ic_fiber_manual_record_red_24dp));
-        // Stop recording
-        mediaRecorder.stop();
-        mediaRecorder.reset();
-        mergeTempFiles();
-        saveResult();
-
-        Activity activity = getActivity();
-        if (null != activity) {
-            Log.d(TAG, "Video saved: " + nextVideoAbsolutePath);
-        }
-        nextVideoAbsolutePath = null;
-        startPreview();
-        onVideoSaved();
+        SaveVideoAsyncTask asyncTask = new SaveVideoAsyncTask();
+        asyncTask.execute();
     }
 
     /**
@@ -693,41 +681,7 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
             if (!file2.exists()) {
                 FileHelper.rename(file1, new File(nextVideoAbsolutePath));
             } else {
-                //todo z nejakeho zahadneho duvodu jsou videa opacne
-                Movie[] inMovies = new Movie[]{MovieCreator.build(file2.getAbsolutePath()),
-                        MovieCreator.build(file1.getAbsolutePath())};
-
-                List<Track> videoTracks = new LinkedList<>();
-                List<Track> audioTracks = new LinkedList<>();
-
-                for (Movie m : inMovies) {
-                    for (Track t : m.getTracks()) {
-                        if (t.getHandler().equals("soun")) {
-                            audioTracks.add(t);
-                        }
-                        if (t.getHandler().equals("vide")) {
-                            videoTracks.add(t);
-                        }
-                    }
-                }
-
-                Movie result = new Movie();
-
-                if (audioTracks.size() > 0) {
-                    result.addTrack(new AppendTrack(audioTracks.toArray(new Track[audioTracks.size()])));
-                }
-                if (videoTracks.size() > 0) {
-                    result.addTrack(new AppendTrack(videoTracks.toArray(new Track[videoTracks.size()])));
-                }
-
-                BasicContainer out = (BasicContainer) new DefaultMp4Builder().build(result);
-
-                FileChannel fc = new RandomAccessFile(nextVideoAbsolutePath,
-                        "rw").getChannel();
-                out.writeContainer(fc);
-                fc.close();
-                file1.delete();
-                file2.delete();
+                FileHelper.mergeVideos(nextVideoAbsolutePath, file1, file2);
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -795,14 +749,6 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
 
     public boolean isRecordingVideo() {
         return isRecordingVideo;
-    }
-
-    private void onSavingVideo() {
-        recordButton.setVisibility(View.GONE);
-    }
-
-    private void onVideoSaved() {
-        recordButton.setVisibility(View.VISIBLE);
     }
 
     /**
@@ -884,5 +830,48 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
             }
         }
         return true;
+    }
+
+
+    class SaveVideoAsyncTask extends AsyncTask<Void, Void, Void> {
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            recordButton.setVisibility(View.GONE);
+            progressBar.setVisibility(View.VISIBLE);
+        }
+
+        @Override
+        protected Void doInBackground(Void... voids) {
+            if (!isRecordingVideo) {
+                return null;
+            }
+            // UI
+            isRecordingVideo = false;
+            // Stop recording
+            mediaRecorder.stop();
+            mediaRecorder.reset();
+            mergeTempFiles();
+            saveResult();
+
+            Activity activity = getActivity();
+            if (null != activity) {
+                Log.d(TAG, "Video saved: " + nextVideoAbsolutePath);
+            }
+            nextVideoAbsolutePath = null;
+            startPreview();
+
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Void result) {
+            super.onPostExecute(result);
+            recordButton.setImageDrawable(getResources().getDrawable(R.drawable.ic_fiber_manual_record_red_24dp));
+            recordButton.setVisibility(View.VISIBLE);
+            progressBar.setVisibility(View.GONE);
+        }
+
     }
 }
