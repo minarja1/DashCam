@@ -31,4 +31,8 @@ public final class VideoDAO {
     public static Video findById(int id) {
         return SQLite.select().from(Video.class).where(Video_Table.id.eq(id)).querySingle();
     }
+
+    public static void deleteAll() {
+        SQLite.delete(Video.class).execute();
+    }
 }

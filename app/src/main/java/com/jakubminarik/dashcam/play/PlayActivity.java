@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.DividerItemDecoration;
 import android.support.v7.widget.LinearLayoutManager;
@@ -16,8 +17,8 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.DatePicker;
-import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -27,11 +28,12 @@ import com.jakubminarik.dashcam.R;
 import com.jakubminarik.dashcam.base.BaseActivityDI;
 import com.jakubminarik.dashcam.base.BasePresenter;
 import com.jakubminarik.dashcam.base.Constants;
+import com.jakubminarik.dashcam.helper.DialogHelper;
 import com.jakubminarik.dashcam.model.Video;
+import com.jakubminarik.dashcam.play.dialog.VideoActionListener;
 import com.jakubminarik.dashcam.video_detail.VideoDetailActivity;
 
 import java.io.File;
-import java.lang.ref.WeakReference;
 import java.text.DateFormat;
 import java.util.Calendar;
 import java.util.List;
@@ -42,7 +44,7 @@ import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
 
-public class PlayActivity extends BaseActivityDI implements PlayActivityView, DatePickerDialog.OnDateSetListener {
+public class PlayActivity extends BaseActivityDI implements PlayActivityView, DatePickerDialog.OnDateSetListener, VideoActionListener {
     private static final String ARG_CALENDAR = "arg_calendar";
     @Inject
     PlayActivityPresenter presenter;
@@ -59,6 +61,7 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
     private VideoAdapter adapter;
 
     Calendar myCalendar = Calendar.getInstance();
+    private static final String DIALOG_TAG = "DIALOG_TAG";
 
     @Override
     public BasePresenter getPresenter() {
@@ -88,48 +91,16 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
         recyclerView.addItemDecoration(new DividerItemDecoration(getContext(),
                 DividerItemDecoration.VERTICAL));
 
-        adapter = new VideoAdapter(presenter.getVideos(), new VideoClickListener() {
-            @Override
-            public void onDeleteClicked(final int position) {
-                AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
-                builder.setMessage(R.string.delete_dialog_message)
-                        .setTitle(R.string.delete_dialog_title);
-                builder.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int id) {
-                        presenter.deleteVideo(position, true);
-                    }
-                });
-
-                builder.setNegativeButton(R.string.no, new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int id) {
-                    }
-                });
-
-                AlertDialog dialog = builder.create();
-                dialog.show();
-            }
-
-            @Override
-            public void onInfoClicked(int position) {
-                Video video = presenter.getVideos().get(position);
-                Intent intent = new Intent(getContext(), VideoDetailActivity.class);
-                intent.putExtra(Constants.ARG_VIDEO_ID, video.getId());
-                startActivity(intent);
-            }
-
-            @Override
-            public void onBackgroundClicked(int position) {
-                Video video = presenter.getVideos().get(position);
-                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(video.getPathToFile()));
-                intent.setDataAndType(Uri.parse(video.getPathToFile()), "video/mp4");
-                startActivity(intent);
-            }
-        });
+        adapter = new VideoAdapter(presenter.getVideos());
         recyclerView.setAdapter(adapter);
 
         if (presenter.isShowingFiltered()) {
             showSearchResult();
         }
+    }
+
+    private void onVideoSelected(int position) {
+        VideoDialog.newInstance(position, this).show(getFragmentManager(), DIALOG_TAG);
     }
 
     @OnClick(R.id.cancelSearchButton)
@@ -145,6 +116,7 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
         presenter.loadVideosFromDb();
         adapter.setVideos(presenter.getVideos());
         adapter.notifyDataSetChanged();
+        invalidateOptionsMenu();
     }
 
     @Override
@@ -165,13 +137,52 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
         presenter.filterVideosByDate(myCalendar);
     }
 
+    @Override
+    public void onDeleteClicked(final int position) {
+        AlertDialog dialog = DialogHelper.getConfirmDialog(getContext(), R.string.delete_dialog_title, R.string.delete_dialog_message, R.string.delete, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                presenter.deleteVideo(position);
+                adapter.notifyItemRemoved(position);
+                invalidateOptionsMenu();
+            }
+        });
+        dialog.show();
+        Button positiveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+
+        if (positiveButton != null) {
+            positiveButton.setTextColor(ContextCompat.getColor(dialog.getContext(), R.color.red));
+        }
+    }
+
+    @Override
+    public void onInfoClicked(int position) {
+        Video video = presenter.getVideos().get(position);
+
+        Intent intent = new Intent(getContext(), VideoDetailActivity.class);
+        intent.putExtra(Constants.ARG_VIDEO_ID, video.getId());
+        startActivity(intent);
+    }
+
+    @Override
+    public void onPlayClicked(int position) {
+        Video video = presenter.getVideos().get(position);
+
+        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(video.getPathToFile()));
+        intent.setDataAndType(Uri.parse(video.getPathToFile()), "video/mp4");
+        startActivity(intent);
+    }
+
+    @Override
+    public void onShareClicked(int position) {
+        //todo
+    }
+
     public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHolder> {
         private List<Video> videos;
-        private final VideoClickListener listener;
 
-        private VideoAdapter(List<Video> videos, VideoClickListener listener) {
+        private VideoAdapter(List<Video> videos) {
             setVideos(videos);
-            this.listener = listener;
         }
 
         public void setVideos(List<Video> videos) {
@@ -190,7 +201,7 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
         @Override
         public VideoViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
             View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.video_row_item, parent, false);
-            return new VideoViewHolder(v, listener);
+            return new VideoViewHolder(v);
         }
 
         @Override
@@ -221,39 +232,20 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
             TextView nameTextView;
             @BindView(R.id.dateTextView)
             TextView dateTextView;
-            @BindView(R.id.deleteButton)
-            ImageButton deleteButton;
-            @BindView(R.id.infoButton)
-            ImageButton infoButton;
             @BindView(R.id.itemBackground)
             LinearLayout itemBackground;
             @BindView(R.id.mapThumbnailImageView)
             ImageView mapThumbnailImageView;
 
-            private WeakReference<VideoClickListener> listenerRef;
-
-            public VideoViewHolder(View itemView, VideoClickListener listener) {
+            public VideoViewHolder(View itemView) {
                 super(itemView);
-                listenerRef = new WeakReference<>(listener);
                 ButterKnife.bind(this, itemView);
-
-                deleteButton.setOnClickListener(this);
-                infoButton.setOnClickListener(this);
                 itemBackground.setOnClickListener(this);
-
-
             }
-
 
             @Override
             public void onClick(View v) {
-                if (v.getId() == deleteButton.getId()) {
-                    listenerRef.get().onDeleteClicked(getAdapterPosition());
-                } else if (v.getId() == infoButton.getId()) {
-                    listenerRef.get().onInfoClicked(getAdapterPosition());
-                } else if (v.getId() == itemBackground.getId()) {
-                    listenerRef.get().onBackgroundClicked(getAdapterPosition());
-                }
+                PlayActivity.this.onVideoSelected(getAdapterPosition());
             }
         }
     }
@@ -264,22 +256,18 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
         if (item.getItemId() == android.R.id.home) {
             onBackPressed();
         } else if (item.getItemId() == R.id.menu_deleteAll) {
-            AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
-            builder.setMessage(R.string.delete_all_message)
-                    .setTitle(R.string.delete_all);
-            builder.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
-                public void onClick(DialogInterface dialog, int id) {
+            AlertDialog dialog = DialogHelper.getConfirmDialog(getContext(), R.string.delete_all, R.string.delete_all_message, R.string.delete, new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
                     presenter.deleteAllVideos();
                 }
             });
-
-            builder.setNegativeButton(R.string.no, new DialogInterface.OnClickListener() {
-                public void onClick(DialogInterface dialog, int id) {
-                }
-            });
-
-            AlertDialog dialog = builder.create();
             dialog.show();
+
+            Button positiveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+            if (positiveButton != null) {
+                positiveButton.setTextColor(ContextCompat.getColor(dialog.getContext(), R.color.red));
+            }
 
         } else if (item.getItemId() == R.id.menu_search) {
             new DatePickerDialog(PlayActivity.this, this, myCalendar
@@ -295,15 +283,13 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.menu_play, menu);
 
+        MenuItem deleteItem = menu.findItem(R.id.menu_deleteAll);
+        MenuItem searchItem = menu.findItem(R.id.menu_search);
+
+        boolean notEmpty = presenter.getVideos() != null && !presenter.getVideos().isEmpty();
+        deleteItem.setVisible(notEmpty);
+        searchItem.setVisible(notEmpty);
         return true;
-    }
-
-    public interface VideoClickListener {
-        void onDeleteClicked(int position);
-
-        void onInfoClicked(int position);
-
-        void onBackgroundClicked(int position);
     }
 
     @Override

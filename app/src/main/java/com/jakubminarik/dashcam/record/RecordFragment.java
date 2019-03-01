@@ -401,8 +401,7 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
         } catch (NullPointerException e) {
             // Currently an NPE is thrown when the Camera2API is used but not supported on the
             // device this code runs.
-            DialogHelper.getErrorDialog(getString(R.string.camera_error))
-                    .show(getChildFragmentManager(), FRAGMENT_DIALOG);
+            DialogHelper.getConfirmDialog(getContext(), getString(R.string.camera_error)).show();
         } catch (InterruptedException e) {
             throw new RuntimeException("Interrupted while trying to lock camera opening.");
         }
@@ -807,15 +806,13 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
             if (grantResults.length == VIDEO_PERMISSIONS.length) {
                 for (int result : grantResults) {
                     if (result != PackageManager.PERMISSION_GRANTED) {
-                        DialogHelper.getErrorDialog(getString(R.string.permission_request))
-                                .show(getChildFragmentManager(), FRAGMENT_DIALOG);
+                        DialogHelper.getConfirmDialog(getContext(), getString(R.string.permission_request))
+                                .show();
                         break;
                     }
                 }
             } else {
-                DialogHelper.getErrorDialog(getString(R.string.permission_request))
-                        .show(getChildFragmentManager(), FRAGMENT_DIALOG);
-
+                DialogHelper.getConfirmDialog(getContext(), getString(R.string.permission_request)).show();
             }
         } else {
             super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -847,20 +844,27 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
             if (!isRecordingVideo) {
                 return null;
             }
-            // UI
-            isRecordingVideo = false;
-            // Stop recording
-            mediaRecorder.stop();
-            mediaRecorder.reset();
-            mergeTempFiles();
-            saveResult();
 
-            Activity activity = getActivity();
-            if (null != activity) {
-                Log.d(TAG, "Video saved: " + nextVideoAbsolutePath);
+            try {
+                // Stop recording
+                mediaRecorder.stop();
+                mediaRecorder.reset();
+
+                mergeTempFiles();
+                saveResult();
+
+                Activity activity = getActivity();
+                if (null != activity) {
+                    Log.d(TAG, "Video saved: " + nextVideoAbsolutePath);
+                }
+                nextVideoAbsolutePath = null;
+                startPreview();
+
+                // UI
+                isRecordingVideo = false;
+            } catch (IllegalStateException e) {
+                Log.d(TAG, "Attempted to stop MediaRecorder in invalid state!");
             }
-            nextVideoAbsolutePath = null;
-            startPreview();
 
             return null;
         }

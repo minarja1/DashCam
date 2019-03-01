@@ -1,43 +1,38 @@
 package com.jakubminarik.dashcam.helper;
 
-import android.app.Activity;
-import android.app.AlertDialog;
-import android.app.Dialog;
-import android.app.DialogFragment;
+import android.content.Context;
 import android.content.DialogInterface;
-import android.os.Bundle;
+import android.support.annotation.StringRes;
+import android.support.v4.content.ContextCompat;
+import android.support.v7.app.AlertDialog;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.Button;
+
+import com.jakubminarik.dashcam.R;
 
 public class DialogHelper {
 
-    public static ErrorDialog getErrorDialog(String message) {
-        return ErrorDialog.newInstance(message);
+
+    public static android.support.v7.app.AlertDialog getConfirmDialog(Context context, CharSequence message) {
+        android.support.v7.app.AlertDialog.Builder builder = new android.support.v7.app.AlertDialog.Builder(context);
+
+        builder.setMessage(message);
+        builder.setPositiveButton(R.string.ok, null);
+        builder.setNegativeButton(R.string.cancel, null);
+
+        return builder.create();
     }
 
-    public static class ErrorDialog extends DialogFragment {
+    public static AlertDialog getConfirmDialog(Context context, @StringRes int title, @StringRes int message, @StringRes int okMessage, DialogInterface.OnClickListener listener) {
+        AlertDialog.Builder builder = new android.support.v7.app.AlertDialog.Builder(context);
 
-        private static final String ARG_MESSAGE = "message";
+        builder.setTitle(title);
+        builder.setMessage(message);
+        builder.setPositiveButton(okMessage, listener);
+        builder.setNegativeButton(R.string.cancel, null);
 
-        public static ErrorDialog newInstance(String message) {
-            ErrorDialog dialog = new ErrorDialog();
-            Bundle args = new Bundle();
-            args.putString(ARG_MESSAGE, message);
-            dialog.setArguments(args);
-            return dialog;
-        }
-
-        @Override
-        public Dialog onCreateDialog(Bundle savedInstanceState) {
-            final Activity activity = getActivity();
-            return new AlertDialog.Builder(activity)
-                    .setMessage(getArguments().getString(ARG_MESSAGE))
-                    .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialogInterface, int i) {
-                            activity.finish();
-                        }
-                    })
-                    .create();
-        }
-
+        return builder.create();
     }
+
 }

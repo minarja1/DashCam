@@ -67,13 +67,21 @@ public class PlayActivityPresenter extends BasePresenter<PlayActivityView> {
 
     }
 
-    public void deleteVideo(int position, boolean reloadAfter) {
-        if (position >= getVideos().size()) { //changes were made outside of app
+    public void deleteVideo(int position) {
+
+        int listsize;
+        if (isShowingFiltered()) {
+            listsize = filteredVideos.size();
+        } else {
+            listsize = videos.size();
+        }
+        if (position >= listsize) { //changes were made outside of app
             loadVideosFromDb();
             view.reloadList();
             return;
         }
-        Video video = videos.get(position);
+
+        Video video = isShowingFiltered() ? filteredVideos.get(position) : videos.get(position);
         String pathToFile = video.getPathToFile();
 
         File file = new File(pathToFile);
@@ -82,15 +90,16 @@ public class PlayActivityPresenter extends BasePresenter<PlayActivityView> {
         }
         video.delete();
 
-        if (reloadAfter)
-            view.reloadList();
+        if (isShowingFiltered()) {
+            filteredVideos.remove(video);
+        }
+
+        videos.remove(video);
     }
 
     public void deleteAllVideos() {
+        VideoDAO.deleteAll();
         loadVideosFromDb();
-        for (int i = 0; i <= videos.size(); i++) {
-            deleteVideo(i, false);
-        }
         view.reloadList();
     }
 

@@ -73,6 +73,8 @@ public class RecordActivity extends BaseActivityDI implements RecordActivityView
     @Inject
     RecordActivityPresenter presenter;
 
+    private static final int CAMERA_ZOOM = 10;
+
     GoogleMap googleMap;
     SupportMapFragment mapFrag;
     LocationRequest locationRequest;
@@ -134,7 +136,7 @@ public class RecordActivity extends BaseActivityDI implements RecordActivityView
                     @Override
                     public void run() {
                         if (tracking) {
-                            googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLatLng, 30));
+                            googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLatLng, CAMERA_ZOOM));
                         }
                         if (lastLocation != null && fragment != null && fragment.isRecordingVideo()) {
                             PolylineOptions options = new PolylineOptions();
@@ -309,6 +311,7 @@ public class RecordActivity extends BaseActivityDI implements RecordActivityView
     //saves snapshot of map
     @SuppressWarnings("MissingPermission")
     private void captureAndSaveMapImage(final int videoId) {
+        googleMap.setTrafficEnabled(false);
         final GoogleMap.SnapshotReadyCallback callback = new GoogleMap.SnapshotReadyCallback() {
             Bitmap bitmap = null;
 
@@ -326,6 +329,7 @@ public class RecordActivity extends BaseActivityDI implements RecordActivityView
                 if (fusedLocationClient != null) {
                     requestLocationUpdates();
                 }
+                googleMap.setTrafficEnabled(true);
             }
 
         };

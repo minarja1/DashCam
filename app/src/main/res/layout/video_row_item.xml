@@ -6,82 +6,39 @@
     android:background="?android:attr/selectableItemBackground"
     android:clickable="true"
     android:focusable="true"
+    android:gravity="center_vertical"
     android:orientation="horizontal"
-    android:paddingBottom="14dp"
     android:paddingStart="16dp"
-    android:paddingTop="14dp">
+    android:paddingTop="14dp"
+    android:paddingBottom="14dp">
 
-    <RelativeLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content">
 
-        <RelativeLayout
+    <ImageView
+        android:id="@+id/mapThumbnailImageView"
+        android:layout_width="75dp"
+        android:layout_height="75dp" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/nameTextView"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_centerVertical="true">
+            android:layout_marginStart="16dp"
+            android:text="233423423423.mp4" />
 
-            <ImageView
-                android:id="@+id/mapThumbnailImageView"
-                android:layout_width="75dp"
-                android:layout_height="75dp"
-                android:layout_alignParentStart="true" />
-
-            <RelativeLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_toEndOf="@id/mapThumbnailImageView"
-                android:layout_centerVertical="true">
-
-                <TextView
-                    android:id="@+id/nameTextView"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="16dp"
-                    android:text="233423423423.mp4" />
-
-                <TextView
-                    android:id="@+id/dateTextView"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_below="@+id/nameTextView"
-                    android:layout_marginStart="16dp"
-                    android:text="26. 1. 2018" />
-
-            </RelativeLayout>
-
-
-
-        </RelativeLayout>
-
-
-        <RelativeLayout
+        <TextView
+            android:id="@+id/dateTextView"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_centerVertical="true">
+            android:layout_marginStart="16dp"
+            android:text="26. 1. 2018" />
 
-            <ImageButton
-                android:id="@+id/infoButton"
-                style="@android:style/Widget.Material.Light.Button.Borderless.Small"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_toStartOf="@+id/deleteButton"
-                android:contentDescription="@string/description_info"
-                android:src="@drawable/ic_info_outline_white_24dp" />
+    </LinearLayout>
 
-
-            <ImageButton
-                android:id="@+id/deleteButton"
-                style="@android:style/Widget.Material.Light.Button.Borderless.Small"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentEnd="true"
-                android:contentDescription="@string/delete"
-                android:src="@drawable/ic_delete_white_24dp" />
-
-        </RelativeLayout>
-
-
-
-    </RelativeLayout>
 
 </LinearLayout>
