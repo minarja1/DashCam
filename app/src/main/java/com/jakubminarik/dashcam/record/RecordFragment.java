@@ -10,6 +10,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
 import android.graphics.Matrix;
 import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
@@ -64,6 +65,8 @@ import com.jakubminarik.dashcam.settings.SettingsActivity;
 import com.jakubminarik.dashcam.view.AutoFitTextureView;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.sql.Date;
 import java.util.ArrayList;
@@ -500,8 +503,14 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
         if (null == textureView || null == previewSize || null == activity) {
             return;
         }
+
+        textureView.setTransform(getTransformMatrix(activity, viewWidth, viewHeight));
+    }
+
+    private Matrix getTransformMatrix(Activity activity, int viewWidth, int viewHeight) {
         int rotation = activity.getWindowManager().getDefaultDisplay().getRotation();
         Matrix matrix = new Matrix();
+
         RectF viewRect = new RectF(0, 0, viewWidth, viewHeight);
         RectF bufferRect = new RectF(0, 0, previewSize.getHeight(), previewSize.getWidth());
         float centerX = viewRect.centerX();
@@ -515,7 +524,7 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
             matrix.postScale(scale, scale, centerX, centerY);
             matrix.postRotate(90 * (rotation - 2), centerX, centerY);
         }
-        textureView.setTransform(matrix);
+        return matrix;
     }
 
     private void setUpMediaRecorder() throws IOException {
@@ -584,11 +593,12 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
     }
 
     private void startRecordingVideo() {
-        videoStarted = System.currentTimeMillis();
-        isRecordingVideo = true;
         if (null == cameraDevice || !textureView.isAvailable() || null == previewSize) {
             return;
         }
+        videoStarted = System.currentTimeMillis();
+        isRecordingVideo = true;
+        recordButton.setEnabled(false);
 
         AsyncTask.execute(new Runnable() {
             @Override
@@ -608,7 +618,7 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
                     previewBuilder.addTarget(previewSurface);
 
                     // Set up Surface for the MediaRecorder
-                    Surface recorderSurface = mediaRecorder.getSurface();
+                    final Surface recorderSurface = mediaRecorder.getSurface();
                     surfaces.add(recorderSurface);
                     previewBuilder.addTarget(recorderSurface);
 
@@ -619,6 +629,8 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
                         public void onConfigured(@NonNull CameraCaptureSession cameraCaptureSession) {
                             previewSession = cameraCaptureSession;
                             updatePreview();
+                            // Start recording
+                            mediaRecorder.start();
                             getActivity().runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
@@ -627,11 +639,9 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
                                         @Override
                                         public void run() {
                                             ViewHelper.ImageViewAnimatedChange(getContext(), recordButton, getResources().getDrawable(R.drawable.ic_stop_white_24dp, null));
+                                            recordButton.setEnabled(true);
                                         }
                                     });
-
-                                    // Start recording
-                                    mediaRecorder.start();
                                 }
                             });
                         }
@@ -641,15 +651,17 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
                             Activity activity = getActivity();
                             if (null != activity) {
                                 Toast.makeText(activity, "Failed", Toast.LENGTH_SHORT).show();
+                                recordButton.setEnabled(true);
                             }
                         }
                     }, backgroundHandler);
                 } catch (CameraAccessException | IOException e) {
+                    isRecordingVideo = false;
+                    recordButton.setEnabled(true);
+                    Log.d(TAG, "Failed to start recording");
                     e.printStackTrace();
                 }
             }
-
-
         });
     }
 
@@ -695,9 +707,24 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
         video.setPathToFile(nextVideoAbsolutePath);
         video.setName(nextVideoAbsolutePath.substring(nextVideoAbsolutePath.lastIndexOf("/") + 1));
         video.setTimestamp(new Date(System.currentTimeMillis()));
-        video.setLength(System.currentTimeMillis() - videoStarted);
+        video.setDuration(System.currentTimeMillis() - videoStarted);
+
+        try {
+            String pathToScreenShot = nextVideoAbsolutePath.substring(0, nextVideoAbsolutePath.lastIndexOf('.')) + ".jpg";
+
+            Bitmap bitmap = textureView.getBitmap();
+            Bitmap resizedBitmap = Bitmap.createBitmap(bitmap, 0, 0, textureView.getWidth(), textureView.getHeight(), getTransformMatrix(getActivity(), textureView.getWidth(), textureView.getHeight()), true);
+            resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 95, new FileOutputStream(pathToScreenShot));
+            video.setPathToScreenshot(pathToScreenShot);
+
+        } catch (FileNotFoundException e) {
+            Log.e(TAG, "Exception while saving screenshot");
+            e.printStackTrace();
+        }
+
         video.save();
         RecordActivity activity = (RecordActivity) getActivity();
+
         if (activity != null) {
             activity.onVideoStopped(video.getId());
         }
@@ -862,7 +889,7 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
 
                 // UI
                 isRecordingVideo = false;
-            } catch (IllegalStateException e) {
+            } catch (RuntimeException e) {
                 Log.d(TAG, "Attempted to stop MediaRecorder in invalid state!");
             }
 
@@ -876,6 +903,6 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
             recordButton.setVisibility(View.VISIBLE);
             progressBar.setVisibility(View.GONE);
         }
-
     }
+
 }

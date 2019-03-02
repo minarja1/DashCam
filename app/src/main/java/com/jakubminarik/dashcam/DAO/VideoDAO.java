@@ -25,6 +25,7 @@ public final class VideoDAO {
     public static List<Video> getAllVideos() {
         return SQLite.select().
                 from(Video.class)
+                .orderBy(Video_Table.timestamp, false)
                 .queryList();
     }
 
@@ -32,7 +33,22 @@ public final class VideoDAO {
         return SQLite.select().from(Video.class).where(Video_Table.id.eq(id)).querySingle();
     }
 
+    public static void deleteWithFiles(Video video) {
+        if (video.getPathToScreenshot() != null) {
+            new File(video.getPathToScreenshot()).delete();
+        }
+        if (video.getPathToMaoImage() != null) {
+            new File(video.getPathToMaoImage()).delete();
+        }
+        if (video.getPathToFile() != null) {
+            new File(video.getPathToFile()).delete();
+        }
+        video.delete();
+    }
+
     public static void deleteAll() {
-        SQLite.delete(Video.class).execute();
+        for (Video video : getAllVideos()) {
+            deleteWithFiles(video);
+        }
     }
 }

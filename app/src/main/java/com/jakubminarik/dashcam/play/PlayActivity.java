@@ -7,6 +7,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.content.FileProvider;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.DividerItemDecoration;
 import android.support.v7.widget.LinearLayoutManager;
@@ -24,6 +25,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.bumptech.glide.Glide;
+import com.jakubminarik.dashcam.BuildConfig;
 import com.jakubminarik.dashcam.R;
 import com.jakubminarik.dashcam.base.BaseActivityDI;
 import com.jakubminarik.dashcam.base.BasePresenter;
@@ -122,7 +124,7 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
     @Override
     public void showSearchResult() {
         searchLinearLayout.setVisibility(View.VISIBLE);
-        DateFormat dateFormat = android.text.format.DateFormat.getDateFormat(getApplicationContext());
+        DateFormat dateFormat = android.text.format.DateFormat.getDateFormat(getContext());
         searchTextView.setText(String.format("%s %s", getResources().getString(R.string.displaying_res), dateFormat.format(myCalendar.getTime())));
         adapter.setVideos(presenter.getFilteredVideos());
         adapter.notifyDataSetChanged();
@@ -175,7 +177,20 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
 
     @Override
     public void onShareClicked(int position) {
-        //todo
+        Video video = presenter.getVideos().get(position);
+
+        Intent shareVideoIntent = new Intent(Intent.ACTION_SEND);
+        File videoFile = new File(video.getPathToFile());
+
+        if (videoFile.exists()) {
+            shareVideoIntent.setType("video/mp4");
+
+            Uri videoUri = FileProvider.getUriForFile(getContext(), BuildConfig.APPLICATION_ID + ".provider", videoFile);
+            shareVideoIntent.putExtra(Intent.EXTRA_STREAM, videoUri);
+            shareVideoIntent.putExtra(Intent.EXTRA_SUBJECT, "Video from SmartDashCam");
+
+            startActivity(Intent.createChooser(shareVideoIntent, "Share video"));
+        }
     }
 
     public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHolder> {
@@ -208,17 +223,41 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
         public void onBindViewHolder(@NonNull VideoViewHolder holder, int position) {
             Video video = videos.get(position);
             holder.nameTextView.setText(video.getName());
-            DateFormat dateFormat = android.text.format.DateFormat.getDateFormat(getApplicationContext());
+            DateFormat dateFormat = android.text.format.DateFormat.getDateFormat(getContext());
             holder.dateTextView.setText(dateFormat.format(video.getTimestamp()));
 
-            if (video.getPathToImage() != null && !video.getPathToImage().isEmpty()) {
-                File imageFile = new File(video.getPathToImage());
+            boolean imageSuccesfullyLoaded = false;
+
+            //try loading screenshot
+            if (video.getPathToScreenshot() != null && !video.getPathToScreenshot().isEmpty()) {
+                File imageFile = new File(video.getPathToScreenshot());
                 if (imageFile.exists()) {
                     Glide.with(getContext()).load(imageFile).into(holder.mapThumbnailImageView);
-                } else {
-                    holder.mapThumbnailImageView.setVisibility(View.GONE);
+                    holder.mapThumbnailImageView.setVisibility(View.VISIBLE);
+                    holder.errorImageView.setVisibility(View.GONE);
+                    imageSuccesfullyLoaded = true;
                 }
             }
+            //try loading mapImage
+            if (!imageSuccesfullyLoaded) {
+                if (video.getPathToMaoImage() != null && !video.getPathToMaoImage().isEmpty()) {
+                    File imageFile = new File(video.getPathToMaoImage());
+                    if (imageFile.exists()) {
+                        Glide.with(getContext()).load(imageFile).into(holder.mapThumbnailImageView);
+                        holder.mapThumbnailImageView.setVisibility(View.VISIBLE);
+                        holder.errorImageView.setVisibility(View.GONE);
+                        imageSuccesfullyLoaded = true;
+                    }
+                }
+            }
+            //give up
+            if (!imageSuccesfullyLoaded) {
+                holder.mapThumbnailImageView.setVisibility(View.GONE);
+                holder.errorImageView.setVisibility(View.VISIBLE);
+            }
+
+            holder.durationTextView.setText(video.getDurationString(getContext()));
+
         }
 
 
@@ -232,10 +271,14 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
             TextView nameTextView;
             @BindView(R.id.dateTextView)
             TextView dateTextView;
+            @BindView(R.id.durationTextView)
+            TextView durationTextView;
             @BindView(R.id.itemBackground)
             LinearLayout itemBackground;
             @BindView(R.id.mapThumbnailImageView)
             ImageView mapThumbnailImageView;
+            @BindView(R.id.errorImageView)
+            ImageView errorImageView;
 
             public VideoViewHolder(View itemView) {
                 super(itemView);

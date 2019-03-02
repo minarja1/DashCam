@@ -57,8 +57,8 @@ public class VideoDetailActivity extends BaseActivityDI implements VideoDetailAc
         getSupportActionBar().setTitle(video.getName());
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
-        if (video.getPathToImage() != null && !video.getPathToImage().isEmpty()) {
-            File imageFile = new File(video.getPathToImage());
+        if (video.getPathToMaoImage() != null && !video.getPathToMaoImage().isEmpty()) {
+            File imageFile = new File(video.getPathToMaoImage());
             if (imageFile.exists()) {
                 Glide.with(this).load(imageFile).into(mapImageView);
             } else {
@@ -66,17 +66,11 @@ public class VideoDetailActivity extends BaseActivityDI implements VideoDetailAc
                 mapNotFoundTextView.setVisibility(View.VISIBLE);
             }
         }
-        DateFormat dateFormat = android.text.format.DateFormat.getDateFormat(getApplicationContext());
+        DateFormat dateFormat = android.text.format.DateFormat.getDateFormat(getContext());
         dateTextView.setText(String.format("%s: %s", getResources().getString(R.string.date), dateFormat.format(video.getTimestamp())));
 
-        long millis = video.getLength();
 
-        long second = (millis / 1000) % 60;
-        long minute = (millis / (1000 * 60)) % 60;
-        long hour = (millis / (1000 * 60 * 60)) % 24;
-
-        String time = String.format("%02d:%02d:%02d", hour, minute, second);
-        durationTextView.setText(String.format("%s: %s", getResources().getString(R.string.trip_duration), time));
+        durationTextView.setText(String.format("%s: %s", getResources().getString(R.string.trip_duration), video.getDurationString(getContext())));
 
         if (video.getTripStartAddress() != null && !video.getTripStartAddress().isEmpty()) {
             fromTextView.setText(String.format("%s: %s", getResources().getString(R.string.from), video.getTripStartAddress()));

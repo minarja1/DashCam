@@ -9,14 +9,21 @@
     android:gravity="center_vertical"
     android:orientation="horizontal"
     android:paddingStart="16dp"
-    android:paddingTop="14dp"
-    android:paddingBottom="14dp">
+    android:paddingEnd="16dp">
 
 
     <ImageView
         android:id="@+id/mapThumbnailImageView"
-        android:layout_width="75dp"
-        android:layout_height="75dp" />
+        android:layout_width="112dp"
+        android:layout_height="112dp"
+        android:src="@drawable/ic_videocam_white_24dp" />
+
+    <ImageView
+        android:id="@+id/errorImageView"
+        android:layout_width="112dp"
+        android:layout_height="112dp"
+        android:scaleType="center"
+        android:src="@drawable/ic_error_white_24dp" />
 
     <LinearLayout
         android:layout_width="0dp"
@@ -28,15 +35,19 @@
             android:id="@+id/nameTextView"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:text="233423423423.mp4" />
+            android:layout_marginStart="16dp" />
 
         <TextView
             android:id="@+id/dateTextView"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:text="26. 1. 2018" />
+            android:layout_marginStart="16dp" />
+
+        <TextView
+            android:id="@+id/durationTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp" />
 
     </LinearLayout>
 

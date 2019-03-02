@@ -82,13 +82,9 @@ public class PlayActivityPresenter extends BasePresenter<PlayActivityView> {
         }
 
         Video video = isShowingFiltered() ? filteredVideos.get(position) : videos.get(position);
-        String pathToFile = video.getPathToFile();
 
-        File file = new File(pathToFile);
-        if (file.exists()) {
-            file.delete();
-        }
-        video.delete();
+        VideoDAO.deleteWithFiles(video);
+
 
         if (isShowingFiltered()) {
             filteredVideos.remove(video);

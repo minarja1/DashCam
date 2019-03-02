@@ -361,7 +361,7 @@ public class RecordActivity extends BaseActivityDI implements RecordActivityView
             video.setTripEndAddress(fullAddress);
         }
 
-        video.setPathToImage(f.getAbsolutePath());
+        video.setPathToMaoImage(f.getAbsolutePath());
         video.save();
 
     }
