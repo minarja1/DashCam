@@ -21,12 +21,6 @@ public class LocationHelper {
             addresses = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1); // Here 1 represent max location result to returned, by documents it recommended 1 to 5
         } catch (IOException e) {
             e.printStackTrace();
-            activity.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    addressTextView.setText(activity.getResources().getString(R.string.address_unavailable));
-                }
-            });
         }
 
         if (addresses.size() == 0) {

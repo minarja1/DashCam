@@ -6,4 +6,6 @@ public interface PlayActivityView extends BaseView {
     void reloadList();
 
     void showSearchResult();
+
+    void reloadItem(int itemPosition);
 }

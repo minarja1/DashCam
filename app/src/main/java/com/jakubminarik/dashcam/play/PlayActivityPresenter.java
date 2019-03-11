@@ -6,7 +6,6 @@ import com.jakubminarik.dashcam.DAO.VideoDAO;
 import com.jakubminarik.dashcam.base.BasePresenter;
 import com.jakubminarik.dashcam.model.Video;
 
-import java.io.File;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -64,7 +63,6 @@ public class PlayActivityPresenter extends BasePresenter<PlayActivityView> {
 
     public List<Video> getVideos() {
         return videos;
-
     }
 
     public void deleteVideo(int position) {
@@ -91,6 +89,22 @@ public class PlayActivityPresenter extends BasePresenter<PlayActivityView> {
         }
 
         videos.remove(video);
+    }
+
+    public void reloadVideo(int videoToReloadPosition) {
+        Video videoToReload = null;
+        try {
+            if (isShowingFiltered()) {
+                videoToReload = filteredVideos.get(videoToReloadPosition);
+            } else {
+                videoToReload = videos.get(videoToReloadPosition);
+            }
+        } catch (IndexOutOfBoundsException e){
+        }
+        if (videoToReload != null) {
+            videoToReload.load();
+        }
+        view.reloadItem(videoToReloadPosition);
     }
 
     public void deleteAllVideos() {
@@ -127,4 +141,5 @@ public class PlayActivityPresenter extends BasePresenter<PlayActivityView> {
         filteredVideos.clear();
         showingFiltered = false;
     }
+
 }

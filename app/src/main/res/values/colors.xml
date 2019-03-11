@@ -19,6 +19,8 @@
 
     <color name="greenTransparent">#5000AA06</color>
 
+    <color name="green">#00AA06</color>
+
     <color name="red">#FF0000</color>
     <color name="black">#000000</color>
 

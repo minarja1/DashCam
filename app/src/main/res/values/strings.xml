@@ -21,7 +21,6 @@
 
         ]]>
     </string>
-    <string name="address_unavailable">Adresa momentálně není k dispozici</string>
     <string name="title_activity_settings">Settings</string>
 
     <!-- Strings related to Settings -->
@@ -186,4 +185,7 @@
     <string name="play">Play</string>
     <string name="share">Share</string>
     <string name="details">Details</string>
+    <string name="edit">Edit</string>
+    <string name="edit_name">Edit name</string>
+    <string name="save">Save</string>
 </resources>

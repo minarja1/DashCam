@@ -2,6 +2,7 @@ package com.jakubminarik.dashcam.model;
 
 import android.content.Context;
 import android.support.annotation.Nullable;
+import android.text.TextUtils;
 
 import com.raizlabs.android.dbflow.annotation.Column;
 import com.raizlabs.android.dbflow.annotation.PrimaryKey;
@@ -130,5 +131,9 @@ public class Video extends BaseModel implements Serializable {
         long hour = (millis / (1000 * 60 * 60)) % 24;
 
         return String.format(context.getResources().getConfiguration().locale, "%02d:%02d:%02d", hour, minute, second);
+    }
+
+    public boolean hasMapAvailable() {
+        return !TextUtils.isEmpty(pathToMaoImage);
     }
 }

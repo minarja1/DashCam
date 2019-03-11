@@ -36,6 +36,7 @@ import android.support.annotation.Nullable;
 import android.support.annotation.RequiresApi;
 import android.support.v13.app.FragmentCompat;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.util.Size;
 import android.util.SparseIntArray;
@@ -592,79 +593,6 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
         return StorageHelper.getPublicAlbumStorageDirFile() + TEMP1;
     }
 
-    private void startRecordingVideo() {
-        if (null == cameraDevice || !textureView.isAvailable() || null == previewSize) {
-            return;
-        }
-        videoStarted = System.currentTimeMillis();
-        isRecordingVideo = true;
-        recordButton.setEnabled(false);
-
-        AsyncTask.execute(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    closePreviewSession();
-                    setUpMediaRecorder();
-                    SurfaceTexture texture = textureView.getSurfaceTexture();
-                    assert texture != null;
-                    texture.setDefaultBufferSize(previewSize.getWidth(), previewSize.getHeight());
-                    previewBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
-                    List<Surface> surfaces = new ArrayList<>();
-
-                    // Set up Surface for the camera preview
-                    Surface previewSurface = new Surface(texture);
-                    surfaces.add(previewSurface);
-                    previewBuilder.addTarget(previewSurface);
-
-                    // Set up Surface for the MediaRecorder
-                    final Surface recorderSurface = mediaRecorder.getSurface();
-                    surfaces.add(recorderSurface);
-                    previewBuilder.addTarget(recorderSurface);
-
-                    // Start a capture session
-                    // Once the session starts, we can update the UI and start recording
-                    cameraDevice.createCaptureSession(surfaces, new CameraCaptureSession.StateCallback() {
-                        @Override
-                        public void onConfigured(@NonNull CameraCaptureSession cameraCaptureSession) {
-                            previewSession = cameraCaptureSession;
-                            updatePreview();
-                            // Start recording
-                            mediaRecorder.start();
-                            getActivity().runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    // UI
-                                    getActivity().runOnUiThread(new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            ViewHelper.ImageViewAnimatedChange(getContext(), recordButton, getResources().getDrawable(R.drawable.ic_stop_white_24dp, null));
-                                            recordButton.setEnabled(true);
-                                        }
-                                    });
-                                }
-                            });
-                        }
-
-                        @Override
-                        public void onConfigureFailed(@NonNull CameraCaptureSession cameraCaptureSession) {
-                            Activity activity = getActivity();
-                            if (null != activity) {
-                                Toast.makeText(activity, "Failed", Toast.LENGTH_SHORT).show();
-                                recordButton.setEnabled(true);
-                            }
-                        }
-                    }, backgroundHandler);
-                } catch (CameraAccessException | IOException e) {
-                    isRecordingVideo = false;
-                    recordButton.setEnabled(true);
-                    Log.d(TAG, "Failed to start recording");
-                    e.printStackTrace();
-                }
-            }
-        });
-    }
-
     private void closePreviewSession() {
         if (previewSession != null) {
             previewSession.close();
@@ -705,7 +633,8 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
     private void saveResult() {
         Video video = new Video();
         video.setPathToFile(nextVideoAbsolutePath);
-        video.setName(nextVideoAbsolutePath.substring(nextVideoAbsolutePath.lastIndexOf("/") + 1));
+        String fileName = nextVideoAbsolutePath.substring(nextVideoAbsolutePath.lastIndexOf("/") + 1);
+        video.setName(fileName.substring(0, fileName.lastIndexOf('.')));
         video.setTimestamp(new Date(System.currentTimeMillis()));
         video.setDuration(System.currentTimeMillis() - videoStarted);
 
@@ -856,12 +785,103 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
         return true;
     }
 
+    private void startRecordingVideo() {
+        StartRecordingVideoAsyncTask asyncTask = new StartRecordingVideoAsyncTask();
+        asyncTask.execute();
+    }
+
+
+    class StartRecordingVideoAsyncTask extends AsyncTask<Void, Void, Void> {
+
+        SurfaceTexture texture;
+
+        @Override
+        protected void onPreExecute() {
+            if (null == cameraDevice || !textureView.isAvailable() || null == previewSize) {
+                return;
+            }
+            videoStarted = System.currentTimeMillis();
+            isRecordingVideo = true;
+            recordButton.setEnabled(false);
+            texture = textureView.getSurfaceTexture();
+            super.onPreExecute();
+        }
+
+        @Override
+        protected Void doInBackground(Void... voids) {
+
+            try {
+                closePreviewSession();
+                setUpMediaRecorder();
+                assert texture != null;
+                texture.setDefaultBufferSize(previewSize.getWidth(), previewSize.getHeight());
+                previewBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
+                List<Surface> surfaces = new ArrayList<>();
+
+                // Set up Surface for the camera preview
+                Surface previewSurface = new Surface(texture);
+                surfaces.add(previewSurface);
+                previewBuilder.addTarget(previewSurface);
+
+                // Set up Surface for the MediaRecorder
+                final Surface recorderSurface = mediaRecorder.getSurface();
+                surfaces.add(recorderSurface);
+                previewBuilder.addTarget(recorderSurface);
+
+                // Start a capture session
+                // Once the session starts, we can update the UI and start recording
+                cameraDevice.createCaptureSession(surfaces, new CameraCaptureSession.StateCallback() {
+                    @Override
+                    public void onConfigured(@NonNull CameraCaptureSession cameraCaptureSession) {
+                        previewSession = cameraCaptureSession;
+                        updatePreview();
+                        // Start recording
+                        mediaRecorder.start();
+                        getActivity().runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                // UI
+                                getActivity().runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        ViewHelper.ImageViewAnimatedChange(getContext(), recordButton, getResources().getDrawable(R.drawable.ic_stop_white_24dp, null));
+                                    }
+                                });
+                            }
+                        });
+                    }
+
+                    @Override
+                    public void onConfigureFailed(@NonNull CameraCaptureSession cameraCaptureSession) {
+                        Activity activity = getActivity();
+                        if (null != activity) {
+                            Toast.makeText(activity, "Failed", Toast.LENGTH_SHORT).show();
+                            recordButton.setEnabled(true);
+                        }
+                    }
+                }, backgroundHandler);
+            } catch (CameraAccessException | IOException e) {
+                isRecordingVideo = false;
+                Log.d(TAG, "Failed to start recording");
+                e.printStackTrace();
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Void aVoid) {
+            super.onPostExecute(aVoid);
+            recordButton.setEnabled(true);
+        }
+    }
+
 
     class SaveVideoAsyncTask extends AsyncTask<Void, Void, Void> {
 
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
+            recordButton.clearAnimation();
             recordButton.setVisibility(View.GONE);
             progressBar.setVisibility(View.VISIBLE);
         }
@@ -873,7 +893,6 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
             }
 
             try {
-                // Stop recording
                 mediaRecorder.stop();
                 mediaRecorder.reset();
 
@@ -887,10 +906,11 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
                 nextVideoAbsolutePath = null;
                 startPreview();
 
-                // UI
                 isRecordingVideo = false;
             } catch (RuntimeException e) {
                 Log.d(TAG, "Attempted to stop MediaRecorder in invalid state!");
+                mediaRecorder.reset();
+                isRecordingVideo = false;
             }
 
             return null;
@@ -899,7 +919,8 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
         @Override
         protected void onPostExecute(Void result) {
             super.onPostExecute(result);
-            recordButton.setImageDrawable(getResources().getDrawable(R.drawable.ic_fiber_manual_record_red_24dp));
+            recordButton.setImageDrawable(ContextCompat.getDrawable(getContext(), isRecordingVideo ? R.drawable.ic_stop_white_24dp : R.drawable.ic_fiber_manual_record_red_24dp));
+
             recordButton.setVisibility(View.VISIBLE);
             progressBar.setVisibility(View.GONE);
         }

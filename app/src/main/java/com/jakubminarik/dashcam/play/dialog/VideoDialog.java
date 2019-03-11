@@ -1,4 +1,4 @@
-package com.jakubminarik.dashcam.play;
+package com.jakubminarik.dashcam.play.dialog;
 
 import android.app.Dialog;
 import android.app.DialogFragment;
@@ -8,7 +8,6 @@ import android.view.LayoutInflater;
 import android.view.ViewGroup;
 
 import com.jakubminarik.dashcam.R;
-import com.jakubminarik.dashcam.play.dialog.VideoActionListener;
 
 import butterknife.ButterKnife;
 import butterknife.OnClick;

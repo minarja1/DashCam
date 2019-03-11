@@ -2,7 +2,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/itemBackground"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+    android:layout_height="88dp"
     android:background="?android:attr/selectableItemBackground"
     android:clickable="true"
     android:focusable="true"
@@ -15,15 +15,16 @@
     <ImageView
         android:id="@+id/mapThumbnailImageView"
         android:layout_width="112dp"
-        android:layout_height="112dp"
+        android:layout_height="wrap_content"
         android:src="@drawable/ic_videocam_white_24dp" />
 
     <ImageView
         android:id="@+id/errorImageView"
         android:layout_width="112dp"
-        android:layout_height="112dp"
+        android:layout_height="wrap_content"
         android:scaleType="center"
-        android:src="@drawable/ic_error_white_24dp" />
+        android:src="@drawable/ic_error_white_24dp"
+        android:visibility="gone" />
 
     <LinearLayout
         android:layout_width="0dp"
@@ -51,5 +52,14 @@
 
     </LinearLayout>
 
+
+    <ImageView
+        android:id="@+id/mapImageView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:paddingEnd="-2dp"
+        android:src="@drawable/ic_map_white_24dp"
+        android:tint="@color/colorTextSecondary" />
 
 </LinearLayout>

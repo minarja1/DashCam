@@ -33,6 +33,7 @@ import com.jakubminarik.dashcam.base.Constants;
 import com.jakubminarik.dashcam.helper.DialogHelper;
 import com.jakubminarik.dashcam.model.Video;
 import com.jakubminarik.dashcam.play.dialog.VideoActionListener;
+import com.jakubminarik.dashcam.play.dialog.VideoDialog;
 import com.jakubminarik.dashcam.video_detail.VideoDetailActivity;
 
 import java.io.File;
@@ -61,6 +62,10 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
     TextView searchTextView;
 
     private VideoAdapter adapter;
+
+    private static int VIDEO_DETAIL_ACTIVITY_REQUEST_CODE = 42;
+
+    int videoToReloadPosition;
 
     Calendar myCalendar = Calendar.getInstance();
     private static final String DIALOG_TAG = "DIALOG_TAG";
@@ -122,6 +127,11 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
     }
 
     @Override
+    public void reloadItem(int itemPosition) {
+        adapter.notifyItemChanged(itemPosition);
+    }
+
+    @Override
     public void showSearchResult() {
         searchLinearLayout.setVisibility(View.VISIBLE);
         DateFormat dateFormat = android.text.format.DateFormat.getDateFormat(getContext());
@@ -163,7 +173,8 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
 
         Intent intent = new Intent(getContext(), VideoDetailActivity.class);
         intent.putExtra(Constants.ARG_VIDEO_ID, video.getId());
-        startActivity(intent);
+        videoToReloadPosition = position;
+        startActivityForResult(intent, VIDEO_DETAIL_ACTIVITY_REQUEST_CODE);
     }
 
     @Override
@@ -258,6 +269,8 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
 
             holder.durationTextView.setText(video.getDurationString(getContext()));
 
+            holder.mapImageView.setVisibility(video.hasMapAvailable() ? View.VISIBLE : View.GONE);
+
         }
 
 
@@ -279,6 +292,8 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
             ImageView mapThumbnailImageView;
             @BindView(R.id.errorImageView)
             ImageView errorImageView;
+            @BindView(R.id.mapImageView)
+            ImageView mapImageView;
 
             public VideoViewHolder(View itemView) {
                 super(itemView);
@@ -339,5 +354,13 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
     public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         outState.putSerializable(ARG_CALENDAR, myCalendar);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        //video name might have been changed
+        if (requestCode == VIDEO_DETAIL_ACTIVITY_REQUEST_CODE) {
+            presenter.reloadVideo(videoToReloadPosition);
+        }
     }
 }

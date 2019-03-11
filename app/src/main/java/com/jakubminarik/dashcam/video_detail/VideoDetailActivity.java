@@ -1,10 +1,13 @@
 package com.jakubminarik.dashcam.video_detail;
 
-import android.content.Intent;
-import android.net.Uri;
 import android.os.Bundle;
+import android.support.v4.content.ContextCompat;
+import android.support.v7.app.AlertDialog;
+import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -13,6 +16,7 @@ import com.jakubminarik.dashcam.R;
 import com.jakubminarik.dashcam.base.BaseActivityDI;
 import com.jakubminarik.dashcam.base.BasePresenter;
 import com.jakubminarik.dashcam.model.Video;
+import com.jakubminarik.dashcam.video_detail.dialog.EditValueDialog;
 
 import java.io.File;
 import java.text.DateFormat;
@@ -21,15 +25,14 @@ import javax.inject.Inject;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
-import butterknife.OnClick;
 import dagger.android.AndroidInjection;
 
 public class VideoDetailActivity extends BaseActivityDI implements VideoDetailActivityView {
     @Inject
     VideoDetailActivityPresenter presenter;
 
-    @BindView(R.id.mapImageView)
-    ImageView mapImageView;
+    @BindView(R.id.videoImageView)
+    ImageView videoImageView;
     @BindView(R.id.mapNotFoundTextView)
     TextView mapNotFoundTextView;
     @BindView(R.id.dateTextView)
@@ -40,6 +43,8 @@ public class VideoDetailActivity extends BaseActivityDI implements VideoDetailAc
     TextView fromTextView;
     @BindView(R.id.toTextView)
     TextView toTextView;
+
+    private Video video;
 
     @Override
     public BasePresenter getPresenter() {
@@ -52,7 +57,7 @@ public class VideoDetailActivity extends BaseActivityDI implements VideoDetailAc
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_video_detail);
         ButterKnife.bind(this);
-        Video video = presenter.getVideo();
+        video = presenter.getVideo();
 
         getSupportActionBar().setTitle(video.getName());
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
@@ -60,12 +65,43 @@ public class VideoDetailActivity extends BaseActivityDI implements VideoDetailAc
         if (video.getPathToMaoImage() != null && !video.getPathToMaoImage().isEmpty()) {
             File imageFile = new File(video.getPathToMaoImage());
             if (imageFile.exists()) {
-                Glide.with(this).load(imageFile).into(mapImageView);
+                Glide.with(this).load(imageFile).into(videoImageView);
             } else {
-                mapImageView.setVisibility(View.GONE);
+                videoImageView.setVisibility(View.GONE);
                 mapNotFoundTextView.setVisibility(View.VISIBLE);
             }
         }
+
+        boolean imageSuccesfullyLoaded = false;
+        //try loading mapImage
+
+        if (video.getPathToMaoImage() != null && !video.getPathToMaoImage().isEmpty()) {
+            File imageFile = new File(video.getPathToMaoImage());
+            if (imageFile.exists()) {
+                Glide.with(getContext()).load(imageFile).into(videoImageView);
+                videoImageView.setVisibility(View.VISIBLE);
+                imageSuccesfullyLoaded = true;
+            }
+        }
+
+        //try loading screenshot
+        if (!imageSuccesfullyLoaded) {
+            if (video.getPathToScreenshot() != null && !video.getPathToScreenshot().isEmpty()) {
+                File imageFile = new File(video.getPathToScreenshot());
+                if (imageFile.exists()) {
+                    Glide.with(getContext()).load(imageFile).into(videoImageView);
+                    videoImageView.setVisibility(View.VISIBLE);
+                    imageSuccesfullyLoaded = true;
+                }
+            }
+        }
+
+        //give up
+        if (!imageSuccesfullyLoaded) {
+            videoImageView.setVisibility(View.GONE);
+            mapNotFoundTextView.setVisibility(View.VISIBLE);
+        }
+
         DateFormat dateFormat = android.text.format.DateFormat.getDateFormat(getContext());
         dateTextView.setText(String.format("%s: %s", getResources().getString(R.string.date), dateFormat.format(video.getTimestamp())));
 
@@ -81,11 +117,30 @@ public class VideoDetailActivity extends BaseActivityDI implements VideoDetailAc
         }
     }
 
-    @OnClick(R.id.playVideoButton)
-    void onPlayVideoButtonClicked() {
-        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(presenter.getVideo().getPathToFile()));
-        intent.setDataAndType(Uri.parse(presenter.getVideo().getPathToFile()), "video/mp4");
-        startActivity(intent);
+
+    private void showRenameDialog() {
+        EditValueDialog editNameDialog = EditValueDialog.newInstance(video.getName(),
+                getResources().getString(R.string.edit_name), getResources().getString(R.string.edit_name));
+
+        editNameDialog.setListener(new EditValueDialog.OnTextSumbittedListener() {
+            @Override
+            public void onTextSubmitted(String text) {
+                video.setName(text);
+                video.save();
+                getSupportActionBar().setTitle(video.getName());
+            }
+        });
+
+        if (getFragmentManager() != null) {
+            editNameDialog.show(getSupportFragmentManager(), "AddTextDialog");
+        }
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.menu_video_detail, menu);
+        return true;
     }
 
     @Override
@@ -93,7 +148,10 @@ public class VideoDetailActivity extends BaseActivityDI implements VideoDetailAc
         if (item.getItemId() == android.R.id.home) {
             onBackPressed();
             return true;
+        } else if (item.getItemId() == R.id.menu_edit) {
+            showRenameDialog();
         }
         return super.onOptionsItemSelected(item);
     }
+
 }
