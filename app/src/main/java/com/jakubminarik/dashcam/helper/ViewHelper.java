@@ -9,13 +9,14 @@ import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 
 public class ViewHelper {
 
-    public static void ImageViewAnimatedChange(Context c, final ImageView v, final Drawable new_image) {
-        final Animation anim_out = AnimationUtils.loadAnimation(c, android.R.anim.fade_out);
-        final Animation anim_in = AnimationUtils.loadAnimation(c, android.R.anim.fade_in);
+    public static void imageViewAnimatedChange(Context context, final ImageView view, final Drawable new_image) {
+        final Animation anim_out = AnimationUtils.loadAnimation(context, android.R.anim.fade_out);
+        final Animation anim_in = AnimationUtils.loadAnimation(context, android.R.anim.fade_in);
         anim_out.setAnimationListener(new Animation.AnimationListener() {
             @Override
             public void onAnimationStart(Animation animation) {
@@ -27,24 +28,35 @@ public class ViewHelper {
 
             @Override
             public void onAnimationEnd(Animation animation) {
-                v.setImageDrawable(new_image);
-                anim_in.setAnimationListener(new Animation.AnimationListener() {
-                    @Override
-                    public void onAnimationStart(Animation animation) {
-                    }
-
-                    @Override
-                    public void onAnimationRepeat(Animation animation) {
-                    }
-
-                    @Override
-                    public void onAnimationEnd(Animation animation) {
-                    }
-                });
-                v.startAnimation(anim_in);
+                view.setImageDrawable(new_image);
+                view.startAnimation(anim_in);
             }
         });
-        v.startAnimation(anim_out);
+        view.startAnimation(anim_out);
+    }
+
+    //todo zbavit se tohoto copy paste
+    public static void imageButtonAnimatedChange(Context context, final ImageButton view, final Drawable new_image, long duration) {
+        final Animation anim_out = AnimationUtils.loadAnimation(context, android.R.anim.fade_out);
+        anim_out.setDuration(duration);
+        final Animation anim_in = AnimationUtils.loadAnimation(context, android.R.anim.fade_in);
+        anim_in.setDuration(duration);
+        anim_out.setAnimationListener(new Animation.AnimationListener() {
+            @Override
+            public void onAnimationStart(Animation animation) {
+            }
+
+            @Override
+            public void onAnimationRepeat(Animation animation) {
+            }
+
+            @Override
+            public void onAnimationEnd(Animation animation) {
+                view.setImageDrawable(new_image);
+                view.startAnimation(anim_in);
+            }
+        });
+        view.startAnimation(anim_out);
     }
 
     public static Bitmap setViewToBitmapImage(View view) {

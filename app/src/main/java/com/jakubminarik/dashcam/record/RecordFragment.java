@@ -844,7 +844,7 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
                                 getActivity().runOnUiThread(new Runnable() {
                                     @Override
                                     public void run() {
-                                        ViewHelper.ImageViewAnimatedChange(getContext(), recordButton, getResources().getDrawable(R.drawable.ic_stop_white_24dp, null));
+                                        ViewHelper.imageViewAnimatedChange(getContext(), recordButton, getResources().getDrawable(R.drawable.ic_stop_white_24dp, null));
                                     }
                                 });
                             }

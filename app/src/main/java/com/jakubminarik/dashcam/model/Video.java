@@ -46,6 +46,7 @@ public class Video extends BaseModel implements Serializable {
     @Nullable
     private String pathToScreenshot;
 
+    private boolean selected;
 
     public int getId() {
         return id;
@@ -117,6 +118,14 @@ public class Video extends BaseModel implements Serializable {
     @Nullable
     public String getPathToScreenshot() {
         return pathToScreenshot;
+    }
+
+    public boolean isSelected() {
+        return selected;
+    }
+
+    public void setSelected(boolean selected) {
+        this.selected = selected;
     }
 
     public void setPathToScreenshot(@Nullable String pathToScreenshot) {

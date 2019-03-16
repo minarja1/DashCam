@@ -20,6 +20,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.DatePicker;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -31,6 +32,7 @@ import com.jakubminarik.dashcam.base.BaseActivityDI;
 import com.jakubminarik.dashcam.base.BasePresenter;
 import com.jakubminarik.dashcam.base.Constants;
 import com.jakubminarik.dashcam.helper.DialogHelper;
+import com.jakubminarik.dashcam.helper.ViewHelper;
 import com.jakubminarik.dashcam.model.Video;
 import com.jakubminarik.dashcam.play.dialog.VideoActionListener;
 import com.jakubminarik.dashcam.play.dialog.VideoDialog;
@@ -106,7 +108,11 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
         }
     }
 
-    private void onVideoSelected(int position) {
+    private void onBackgroundClicked(int position) {
+        onPlayClicked(position);
+    }
+
+    private void onMenuClicked(int position) {
         VideoDialog.newInstance(position, this).show(getFragmentManager(), DIALOG_TAG);
     }
 
@@ -231,20 +237,44 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
         }
 
         @Override
-        public void onBindViewHolder(@NonNull VideoViewHolder holder, int position) {
-            Video video = videos.get(position);
+        public void onBindViewHolder(@NonNull final VideoViewHolder holder, int position) {
+            final Video video = videos.get(position);
             holder.nameTextView.setText(video.getName());
             DateFormat dateFormat = android.text.format.DateFormat.getDateFormat(getContext());
             holder.dateTextView.setText(dateFormat.format(video.getTimestamp()));
 
-            boolean imageSuccesfullyLoaded = false;
+            loadThumbnail(video, holder);
 
+            holder.durationTextView.setText(video.getDurationString(getContext()));
+
+            holder.mapImageView.setVisibility(video.hasMapAvailable() ? View.VISIBLE : View.GONE);
+
+            holder.actionButton.setEnabled(!video.isSelected());
+            holder.actionButton.setImageDrawable(ContextCompat.getDrawable(getContext(), video.isSelected() ? R.drawable.ic_check_circle_white_24dp : R.drawable.ic_more_vert_white_24dp));
+            holder.itemBackground.setOnLongClickListener(new View.OnLongClickListener() {
+                @Override
+                public boolean onLongClick(View v) {
+                    video.setSelected(!video.isSelected());
+                    holder.actionButton.setEnabled(!video.isSelected());
+                    if (video.isSelected()) {
+                        ViewHelper.imageButtonAnimatedChange(getContext(), holder.actionButton, ContextCompat.getDrawable(getContext(), R.drawable.ic_check_circle_white_24dp), 150);
+                    } else {
+                        ViewHelper.imageButtonAnimatedChange(getContext(), holder.actionButton, ContextCompat.getDrawable(getContext(), R.drawable.ic_more_vert_white_24dp), 150);
+                    }
+                    return true;
+                }
+            });
+
+        }
+
+        private void loadThumbnail(Video video, VideoViewHolder holder) {
+            boolean imageSuccesfullyLoaded = false;
             //try loading screenshot
             if (video.getPathToScreenshot() != null && !video.getPathToScreenshot().isEmpty()) {
                 File imageFile = new File(video.getPathToScreenshot());
                 if (imageFile.exists()) {
-                    Glide.with(getContext()).load(imageFile).into(holder.mapThumbnailImageView);
-                    holder.mapThumbnailImageView.setVisibility(View.VISIBLE);
+                    Glide.with(getContext()).load(imageFile).into(holder.thumbnailImageView);
+                    holder.thumbnailImageView.setVisibility(View.VISIBLE);
                     holder.errorImageView.setVisibility(View.GONE);
                     imageSuccesfullyLoaded = true;
                 }
@@ -254,8 +284,8 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
                 if (video.getPathToMaoImage() != null && !video.getPathToMaoImage().isEmpty()) {
                     File imageFile = new File(video.getPathToMaoImage());
                     if (imageFile.exists()) {
-                        Glide.with(getContext()).load(imageFile).into(holder.mapThumbnailImageView);
-                        holder.mapThumbnailImageView.setVisibility(View.VISIBLE);
+                        Glide.with(getContext()).load(imageFile).into(holder.thumbnailImageView);
+                        holder.thumbnailImageView.setVisibility(View.VISIBLE);
                         holder.errorImageView.setVisibility(View.GONE);
                         imageSuccesfullyLoaded = true;
                     }
@@ -263,16 +293,11 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
             }
             //give up
             if (!imageSuccesfullyLoaded) {
-                holder.mapThumbnailImageView.setVisibility(View.GONE);
+                holder.thumbnailImageView.setVisibility(View.GONE);
                 holder.errorImageView.setVisibility(View.VISIBLE);
             }
 
-            holder.durationTextView.setText(video.getDurationString(getContext()));
-
-            holder.mapImageView.setVisibility(video.hasMapAvailable() ? View.VISIBLE : View.GONE);
-
         }
-
 
         @Override
         public int getItemCount() {
@@ -288,22 +313,29 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
             TextView durationTextView;
             @BindView(R.id.itemBackground)
             LinearLayout itemBackground;
-            @BindView(R.id.mapThumbnailImageView)
-            ImageView mapThumbnailImageView;
+            @BindView(R.id.thumbnailImageView)
+            ImageView thumbnailImageView;
             @BindView(R.id.errorImageView)
             ImageView errorImageView;
             @BindView(R.id.mapImageView)
             ImageView mapImageView;
+            @BindView(R.id.actionButton)
+            ImageButton actionButton;
 
             public VideoViewHolder(View itemView) {
                 super(itemView);
                 ButterKnife.bind(this, itemView);
                 itemBackground.setOnClickListener(this);
+                actionButton.setOnClickListener(this);
             }
 
             @Override
             public void onClick(View v) {
-                PlayActivity.this.onVideoSelected(getAdapterPosition());
+                if (v == itemBackground) {
+                    PlayActivity.this.onBackgroundClicked(getAdapterPosition());
+                } else if (v == actionButton) {
+                    PlayActivity.this.onMenuClicked(getAdapterPosition());
+                }
             }
         }
     }
