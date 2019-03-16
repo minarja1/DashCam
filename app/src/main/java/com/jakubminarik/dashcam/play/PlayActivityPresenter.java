@@ -16,6 +16,7 @@ import javax.inject.Inject;
 
 public class PlayActivityPresenter extends BasePresenter<PlayActivityView> {
 
+    private static final String ARG_ALL_VIDEOS = "ARG_ALL_VIDEOS";
     private static final String ARG_FILTERED_VIDEOS = "arg_filtered_videos";
     private static final String ARG_SHOWING_FILTERED = "showing_filtered";
     private PlayActivityView view;
@@ -39,15 +40,28 @@ public class PlayActivityPresenter extends BasePresenter<PlayActivityView> {
 
     @Override
     public void onEnter(Bundle bundle) {
-        loadVideosFromDb();
+        boolean videosLoadad = false;
         if (bundle != null) {
             if (bundle.containsKey(ARG_FILTERED_VIDEOS)) {
                 filteredVideos = (List<Video>) bundle.getSerializable(ARG_FILTERED_VIDEOS);
+            }
+            if (bundle.containsKey(ARG_ALL_VIDEOS)) {
+                videos = (List<Video>) bundle.getSerializable(ARG_ALL_VIDEOS);
+                videosLoadad = true;
             }
             if (bundle.containsKey(ARG_SHOWING_FILTERED)) {
                 showingFiltered = bundle.getBoolean(ARG_SHOWING_FILTERED);
             }
         }
+        if (!videosLoadad)
+            loadVideosFromDb();
+    }
+
+    @Override
+    public void onExit(Bundle bundle) {
+        bundle.putSerializable(ARG_FILTERED_VIDEOS, (Serializable) filteredVideos);
+        bundle.putSerializable(ARG_ALL_VIDEOS, (Serializable) videos);
+        bundle.putBoolean(ARG_SHOWING_FILTERED, showingFiltered);
     }
 
     public void loadVideosFromDb() {
@@ -55,11 +69,6 @@ public class PlayActivityPresenter extends BasePresenter<PlayActivityView> {
         videos = VideoDAO.getAllVideos();
     }
 
-    @Override
-    public void onExit(Bundle bundle) {
-        bundle.putSerializable(ARG_FILTERED_VIDEOS, (Serializable) filteredVideos);
-        bundle.putBoolean(ARG_SHOWING_FILTERED, showingFiltered);
-    }
 
     public List<Video> getVideos() {
         return videos;
@@ -67,19 +76,15 @@ public class PlayActivityPresenter extends BasePresenter<PlayActivityView> {
 
     public void deleteVideo(int position) {
 
-        int listsize;
-        if (isShowingFiltered()) {
-            listsize = filteredVideos.size();
-        } else {
-            listsize = videos.size();
-        }
-        if (position >= listsize) { //changes were made outside of app
+        int listSize = getCurrentVideoList().size();
+
+        if (position >= listSize) { //changes were made outside of app
             loadVideosFromDb();
             view.reloadList();
             return;
         }
 
-        Video video = isShowingFiltered() ? filteredVideos.get(position) : videos.get(position);
+        Video video = getCurrentVideoList().get(position);
 
         VideoDAO.deleteWithFiles(video);
 
@@ -94,12 +99,8 @@ public class PlayActivityPresenter extends BasePresenter<PlayActivityView> {
     public void reloadVideo(int videoToReloadPosition) {
         Video videoToReload = null;
         try {
-            if (isShowingFiltered()) {
-                videoToReload = filteredVideos.get(videoToReloadPosition);
-            } else {
-                videoToReload = videos.get(videoToReloadPosition);
-            }
-        } catch (IndexOutOfBoundsException e){
+            videoToReload = getCurrentVideoList().get(videoToReloadPosition);
+        } catch (IndexOutOfBoundsException e) {
         }
         if (videoToReload != null) {
             videoToReload.load();
@@ -142,4 +143,56 @@ public class PlayActivityPresenter extends BasePresenter<PlayActivityView> {
         showingFiltered = false;
     }
 
+    private List<Video> getCurrentVideoList() {
+        if (isShowingFiltered()) {
+            return filteredVideos;
+        } else {
+            return videos;
+        }
+    }
+
+    public boolean isVideoSelected() {
+        return getSelectedCount() > 0;
+    }
+
+    public int getSelectedCount() {
+        return getSelectedVideos().size();
+    }
+
+    private List<Video> getSelectedVideos() {
+        List<Video> videos = new ArrayList<>();
+        if (getCurrentVideoList() != null && getCurrentVideoList().size() > 0) {
+            for (Video video : getCurrentVideoList()) {
+                if (video.isSelected()) {
+                    videos.add(video);
+                }
+            }
+        }
+        return videos;
+    }
+
+    public List<String> getSelectedFilePaths() {
+        List<String> paths = new ArrayList<>();
+        for (Video video : getSelectedVideos()) {
+            paths.add(video.getPathToFile());
+        }
+        return paths;
+    }
+
+    public void deleteSelectedVideos() {
+        for (Video video : getSelectedVideos()) {
+            int position = getCurrentVideoList().indexOf(video);
+            if (position >= 0) {
+                deleteVideo(position);
+                view.notifyItemRemoved(position);
+            }
+        }
+    }
+
+    public void deselectAllVideos() {
+        for (Video video : getSelectedVideos()) {
+            video.setSelected(false);
+        }
+        view.notifyDataSetChanged();
+    }
 }

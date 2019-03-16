@@ -14,7 +14,6 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.Menu;
-import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
@@ -40,6 +39,7 @@ import com.jakubminarik.dashcam.video_detail.VideoDetailActivity;
 
 import java.io.File;
 import java.text.DateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
@@ -91,14 +91,23 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
         initList();
 
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-        getSupportActionBar().setTitle(getResources().getString(R.string.videos));
+        updateActionBar();
+    }
+
+    private void updateActionBar() {
+        if (presenter.isVideoSelected()) {
+            getSupportActionBar().setTitle(String.valueOf(presenter.getSelectedCount()));
+            getSupportActionBar().setHomeAsUpIndicator(ContextCompat.getDrawable(getContext(), R.drawable.ic_close_white_24dp));
+        } else {
+            getSupportActionBar().setTitle(R.string.recorded_videos);
+            getSupportActionBar().setHomeAsUpIndicator(ContextCompat.getDrawable(getContext(), R.drawable.ic_arrow_back_white_24dp));
+        }
     }
 
     private void initList() {
         RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(this);
         recyclerView.setLayoutManager(layoutManager);
-        recyclerView.addItemDecoration(new DividerItemDecoration(getContext(),
-                DividerItemDecoration.VERTICAL));
+        recyclerView.addItemDecoration(new DividerItemDecoration(getContext(), DividerItemDecoration.VERTICAL));
 
         adapter = new VideoAdapter(presenter.getVideos());
         recyclerView.setAdapter(adapter);
@@ -138,6 +147,12 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
     }
 
     @Override
+    public void notifyDataSetChanged() {
+        adapter.notifyDataSetChanged();
+        invalidateOptionsMenu();
+    }
+
+    @Override
     public void showSearchResult() {
         searchLinearLayout.setVisibility(View.VISIBLE);
         DateFormat dateFormat = android.text.format.DateFormat.getDateFormat(getContext());
@@ -153,6 +168,12 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
         myCalendar.set(Calendar.DAY_OF_MONTH, dayOfMonth);
 
         presenter.filterVideosByDate(myCalendar);
+    }
+
+    @Override
+    public void notifyItemRemoved(int position) {
+        adapter.notifyItemChanged(position);
+        invalidateOptionsMenu();
     }
 
     @Override
@@ -210,6 +231,26 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
         }
     }
 
+    private void shareSelectedVideos() {
+        Intent intent = new Intent();
+        intent.setAction(Intent.ACTION_SEND_MULTIPLE);
+        intent.putExtra(Intent.EXTRA_SUBJECT, "Videos from SmartDashCam");
+        intent.setType("video/mp4");
+
+        ArrayList<Uri> uris = new ArrayList<>();
+
+        for (String path : presenter.getSelectedFilePaths()) {
+            File file = new File(path);
+            if (file.exists()) {
+                Uri videoUri = FileProvider.getUriForFile(getContext(), BuildConfig.APPLICATION_ID + ".provider", file);
+                uris.add(videoUri);
+            }
+        }
+
+        intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris);
+        startActivity(Intent.createChooser(intent, "Share videos"));
+    }
+
     public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHolder> {
         private List<Video> videos;
 
@@ -256,11 +297,13 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
                 public boolean onLongClick(View v) {
                     video.setSelected(!video.isSelected());
                     holder.actionButton.setEnabled(!video.isSelected());
+                    invalidateOptionsMenu();
                     if (video.isSelected()) {
                         ViewHelper.imageButtonAnimatedChange(getContext(), holder.actionButton, ContextCompat.getDrawable(getContext(), R.drawable.ic_check_circle_white_24dp), 150);
                     } else {
                         ViewHelper.imageButtonAnimatedChange(getContext(), holder.actionButton, ContextCompat.getDrawable(getContext(), R.drawable.ic_more_vert_white_24dp), 150);
                     }
+                    invalidateOptionsMenu();
                     return true;
                 }
             });
@@ -346,39 +389,67 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
         if (item.getItemId() == android.R.id.home) {
             onBackPressed();
         } else if (item.getItemId() == R.id.menu_deleteAll) {
-            AlertDialog dialog = DialogHelper.getConfirmDialog(getContext(), R.string.delete_all, R.string.delete_all_message, R.string.delete, new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    presenter.deleteAllVideos();
-                }
-            });
+            AlertDialog dialog;
+            if (presenter.isVideoSelected()) {
+                dialog = DialogHelper.getConfirmDialog(getContext(), R.string.delete_selected, R.string.delete_selected_message, R.string.delete, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        presenter.deleteSelectedVideos();
+                    }
+                });
+            } else {
+                dialog = DialogHelper.getConfirmDialog(getContext(), R.string.delete_all, R.string.delete_all_message, R.string.delete, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        presenter.deleteAllVideos();
+                    }
+                });
+            }
             dialog.show();
 
             Button positiveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
             if (positiveButton != null) {
                 positiveButton.setTextColor(ContextCompat.getColor(dialog.getContext(), R.color.red));
             }
-
         } else if (item.getItemId() == R.id.menu_search) {
             new DatePickerDialog(PlayActivity.this, this, myCalendar
                     .get(Calendar.YEAR), myCalendar.get(Calendar.MONTH),
                     myCalendar.get(Calendar.DAY_OF_MONTH)).show();
+        } else if (item.getItemId() == R.id.menu_share) {
+            shareSelectedVideos();
         }
 
         return super.onOptionsItemSelected(item);
     }
 
     @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        MenuInflater inflater = getMenuInflater();
-        inflater.inflate(R.menu.menu_play, menu);
+    public void onBackPressed() {
+        if (presenter.isVideoSelected()) {
+            presenter.deselectAllVideos();
+        } else {
+            super.onBackPressed();
+        }
+    }
 
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu_play, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
         MenuItem deleteItem = menu.findItem(R.id.menu_deleteAll);
         MenuItem searchItem = menu.findItem(R.id.menu_search);
+        MenuItem shareItem = menu.findItem(R.id.menu_share);
 
         boolean notEmpty = presenter.getVideos() != null && !presenter.getVideos().isEmpty();
+
         deleteItem.setVisible(notEmpty);
-        searchItem.setVisible(notEmpty);
+        searchItem.setVisible(notEmpty && !presenter.isVideoSelected());
+        shareItem.setVisible(notEmpty && presenter.isVideoSelected());
+
+        updateActionBar();
         return true;
     }
 

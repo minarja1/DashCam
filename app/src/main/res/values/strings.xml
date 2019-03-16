@@ -155,15 +155,17 @@
 
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
-    <string name="videos">Recorded videos</string>
+    <string name="recorded_videos">Recorded videos</string>
     <string name="delete">Delete</string>
     <string name="ok">YES</string>
     <string name="delete_dialog_message">Are you sure you want to delete this video?</string>
     <string name="delete_dialog_title">Delete video</string>
     <string name="no">NO</string>
     <string name="delete_all">Delete all videos</string>
+    <string name="delete_selected">Delete selected videos</string>
     <string name="open_dir">Open directory</string>
     <string name="delete_all_message">Are you sure you want to delete all recorded videos?</string>
+    <string name="delete_selected_message">Are you sure you want to delete selected videos?</string>
     <string name="search">Search</string>
     <string name="no_videos">No videos found</string>
     <string name="displaying_res">Displaying results for</string>

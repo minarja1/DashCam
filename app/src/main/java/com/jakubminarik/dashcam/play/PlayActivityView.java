@@ -8,4 +8,8 @@ public interface PlayActivityView extends BaseView {
     void showSearchResult();
 
     void reloadItem(int itemPosition);
+
+    void notifyItemRemoved(int itemPosition);
+
+    void notifyDataSetChanged();
 }
