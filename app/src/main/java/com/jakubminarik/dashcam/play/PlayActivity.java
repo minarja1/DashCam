@@ -172,8 +172,10 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
 
     @Override
     public void notifyItemRemoved(int position) {
-        adapter.notifyItemChanged(position);
-        invalidateOptionsMenu();
+        if (position < adapter.getItemCount()) {
+            adapter.notifyItemChanged(position);
+            invalidateOptionsMenu();
+        }
     }
 
     @Override
