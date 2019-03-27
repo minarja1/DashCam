@@ -41,7 +41,6 @@ import java.io.File;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.List;
 
 import javax.inject.Inject;
 
@@ -109,7 +108,7 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
         recyclerView.setLayoutManager(layoutManager);
         recyclerView.addItemDecoration(new DividerItemDecoration(getContext(), DividerItemDecoration.VERTICAL));
 
-        adapter = new VideoAdapter(presenter.getVideos());
+        adapter = new VideoAdapter();
         recyclerView.setAdapter(adapter);
 
         if (presenter.isShowingFiltered()) {
@@ -122,21 +121,27 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
     }
 
     private void onMenuClicked(int position) {
-        VideoDialog.newInstance(position, this).show(getFragmentManager(), DIALOG_TAG);
+        Video video = presenter.getVideos().get(position);
+        if (video.isSelected()) {
+            video.setSelected(false);
+            notifyItemChanged(position);
+        } else {
+            VideoDialog.newInstance(position, this).show(getFragmentManager(), DIALOG_TAG);
+        }
     }
 
     @OnClick(R.id.cancelSearchButton)
     void cancelSearchButtonClicked() {
         presenter.calcelSearch();
         searchLinearLayout.setVisibility(View.GONE);
-        adapter.setVideos(presenter.getVideos());
+        adapter.update();
         adapter.notifyDataSetChanged();
     }
 
     @Override
     public void reloadList() {
         presenter.loadVideosFromDb();
-        adapter.setVideos(presenter.getVideos());
+        adapter.update();
         adapter.notifyDataSetChanged();
         invalidateOptionsMenu();
     }
@@ -152,12 +157,17 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
         invalidateOptionsMenu();
     }
 
+    public void notifyItemChanged(int position) {
+        adapter.notifyItemChanged(position);
+        invalidateOptionsMenu();
+    }
+
     @Override
     public void showSearchResult() {
         searchLinearLayout.setVisibility(View.VISIBLE);
         DateFormat dateFormat = android.text.format.DateFormat.getDateFormat(getContext());
         searchTextView.setText(String.format("%s %s", getResources().getString(R.string.displaying_res), dateFormat.format(myCalendar.getTime())));
-        adapter.setVideos(presenter.getFilteredVideos());
+        adapter.update();
         adapter.notifyDataSetChanged();
     }
 
@@ -173,7 +183,7 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
     @Override
     public void notifyItemRemoved(int position) {
         if (position < adapter.getItemCount()) {
-            adapter.notifyItemChanged(position);
+            adapter.notifyItemRemoved(position);
             invalidateOptionsMenu();
         }
     }
@@ -183,9 +193,8 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
         AlertDialog dialog = DialogHelper.getConfirmDialog(getContext(), R.string.delete_dialog_title, R.string.delete_dialog_message, R.string.delete, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
+                notifyItemRemoved(position);
                 presenter.deleteVideo(position);
-                adapter.notifyItemRemoved(position);
-                invalidateOptionsMenu();
             }
         });
         dialog.show();
@@ -254,16 +263,13 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
     }
 
     public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHolder> {
-        private List<Video> videos;
 
-        private VideoAdapter(List<Video> videos) {
-            setVideos(videos);
+        private VideoAdapter() {
+            update();
         }
 
-        public void setVideos(List<Video> videos) {
-            this.videos = videos;
-
-            if (videos.size() == 0) {
+        public void update() {
+            if (presenter.getCurrentVideoList().size() == 0) {
                 recyclerView.setVisibility(View.GONE);
                 emptyView.setVisibility(View.VISIBLE);
             } else {
@@ -281,7 +287,7 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
 
         @Override
         public void onBindViewHolder(@NonNull final VideoViewHolder holder, int position) {
-            final Video video = videos.get(position);
+            final Video video = presenter.getCurrentVideoList().get(position);
             holder.nameTextView.setText(video.getName());
             DateFormat dateFormat = android.text.format.DateFormat.getDateFormat(getContext());
             holder.dateTextView.setText(dateFormat.format(video.getTimestamp()));
@@ -292,13 +298,11 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
 
             holder.mapImageView.setVisibility(video.hasMapAvailable() ? View.VISIBLE : View.GONE);
 
-            holder.actionButton.setEnabled(!video.isSelected());
             holder.actionButton.setImageDrawable(ContextCompat.getDrawable(getContext(), video.isSelected() ? R.drawable.ic_check_circle_white_24dp : R.drawable.ic_more_vert_white_24dp));
             holder.itemBackground.setOnLongClickListener(new View.OnLongClickListener() {
                 @Override
                 public boolean onLongClick(View v) {
                     video.setSelected(!video.isSelected());
-                    holder.actionButton.setEnabled(!video.isSelected());
                     invalidateOptionsMenu();
                     if (video.isSelected()) {
                         ViewHelper.imageButtonAnimatedChange(getContext(), holder.actionButton, ContextCompat.getDrawable(getContext(), R.drawable.ic_check_circle_white_24dp), 150);
@@ -346,7 +350,7 @@ public class PlayActivity extends BaseActivityDI implements PlayActivityView, Da
 
         @Override
         public int getItemCount() {
-            return videos.size();
+            return presenter.getCurrentVideoList().size();
         }
 
         public class VideoViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {

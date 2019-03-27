@@ -1,7 +1,11 @@
 package com.jakubminarik.dashcam.video_detail;
 
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.content.FileProvider;
 import android.support.v7.app.AlertDialog;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -12,9 +16,12 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.bumptech.glide.Glide;
+import com.jakubminarik.dashcam.BuildConfig;
+import com.jakubminarik.dashcam.DAO.VideoDAO;
 import com.jakubminarik.dashcam.R;
 import com.jakubminarik.dashcam.base.BaseActivityDI;
 import com.jakubminarik.dashcam.base.BasePresenter;
+import com.jakubminarik.dashcam.helper.DialogHelper;
 import com.jakubminarik.dashcam.model.Video;
 import com.jakubminarik.dashcam.video_detail.dialog.EditValueDialog;
 
@@ -150,8 +157,53 @@ public class VideoDetailActivity extends BaseActivityDI implements VideoDetailAc
             return true;
         } else if (item.getItemId() == R.id.menu_edit) {
             showRenameDialog();
+        } else if (item.getItemId() == R.id.menu_share) {
+            shareVideo();
+        } else if (item.getItemId() == R.id.menu_delete) {
+            deleteVideo();
+        } else if (item.getItemId() == R.id.menu_play) {
+            playVideo();
         }
+
         return super.onOptionsItemSelected(item);
+    }
+
+    private void shareVideo() {
+        Intent shareVideoIntent = new Intent(Intent.ACTION_SEND);
+        File videoFile = new File(video.getPathToFile());
+
+        if (videoFile.exists()) {
+            shareVideoIntent.setType("video/mp4");
+
+            Uri videoUri = FileProvider.getUriForFile(getContext(), BuildConfig.APPLICATION_ID + ".provider", videoFile);
+            shareVideoIntent.putExtra(Intent.EXTRA_STREAM, videoUri);
+            shareVideoIntent.putExtra(Intent.EXTRA_SUBJECT, "Video from SmartDashCam");
+
+            startActivity(Intent.createChooser(shareVideoIntent, "Share video"));
+        }
+    }
+
+    private void deleteVideo() {
+        AlertDialog dialog = DialogHelper.getConfirmDialog(getContext(), R.string.delete_dialog_title, R.string.delete_dialog_message, R.string.delete, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                VideoDAO.deleteWithFiles(video);
+                finish();
+            }
+        });
+        dialog.show();
+        Button positiveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+
+        if (positiveButton != null) {
+            positiveButton.setTextColor(ContextCompat.getColor(dialog.getContext(), R.color.red));
+        }
+
+    }
+
+    private void playVideo() {
+        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(video.getPathToFile()));
+        intent.setDataAndType(Uri.parse(video.getPathToFile()), "video/mp4");
+        startActivity(intent);
     }
 
 }

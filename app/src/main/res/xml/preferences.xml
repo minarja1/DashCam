@@ -26,7 +26,7 @@
             android:key="duration"
             android:negativeButtonText="@null"
             android:positiveButtonText="@null"
-            android:summary="%s"
+            android:summary="@string/duration_summary"
             android:title="@string/pref_duration_title" />
 
 
@@ -59,6 +59,25 @@
             android:positiveButtonText="@null"
             android:summary="%s"
             android:title="@string/pref_resolution_title" />
+
+    </PreferenceCategory>
+
+
+    <PreferenceCategory android:title="@string/smart_features">
+
+        <SwitchPreference
+            android:title="@string/use_map"
+            android:key="useMap"
+            android:summary="@string/use_map_summary"
+            android:icon="@drawable/ic_map_white_24dp"
+            android:defaultValue="true"/>
+
+        <SwitchPreference
+            android:title="@string/auto_start"
+            android:key="autoOnOff"
+            android:summary="@string/auto_on_off_summary"
+            android:icon="@drawable/ic_motion"
+            android:defaultValue="true"/>
 
     </PreferenceCategory>
 

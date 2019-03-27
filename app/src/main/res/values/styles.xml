@@ -17,21 +17,31 @@
         <item name="android:windowFullscreen">true</item>
     </style>
 
+    <!-- The launcher theme. It sets the main window background to the launch_screen drawable -->
+    <style name="AppTheme.Launcher">
+        <item name="android:windowBackground">@drawable/launch_screen</item>
+    </style>
+
     <style name="button">
         <item name="android:layout_width">@dimen/button_width</item>
         <item name="android:layout_margin">@dimen/button_margin</item>
     </style>
 
-    <!--preference screen-->
-    <style name="preferenceTheme" parent="AppTheme">
-        <item name="preferenceTheme">@style/PreferenceThemeOverlay.v14.Material</item>
+    <!--preference screen--><style name="preferenceTheme" parent="AppTheme">
+    <item name="preferenceTheme">@style/PreferenceThemeOverlay.v14.Material</item>
 
-    </style>
+</style>
 
     <style name="mediumText" parent="@android:style/TextAppearance.Medium">
         <item name="android:textSize">15sp</item>
         <item name="android:textColor">@color/colorText</item>
         <item name="android:textStyle">bold</item>
     </style>
+
+    <style name="TextRecordBottom" parent="@android:style/TextAppearance">
+        <item name="android:textSize">18sp</item>
+        <item name="android:textColor">@color/colorText</item>
+    </style>
+
 
 </resources>

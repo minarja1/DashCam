@@ -26,4 +26,12 @@ public final class SharedPrefHelper {
     public static String getFPS() {
         return PreferenceManager.getDefaultSharedPreferences(DashCamApplication.getContext()).getString(SettingsFragment.KEY_FPS, "30");
     }
+
+    public static boolean getAutoOnOff() {
+        return PreferenceManager.getDefaultSharedPreferences(DashCamApplication.getContext()).getBoolean(SettingsFragment.KEY_AUTO_ON_OFF, true);
+    }
+
+    public static boolean getUseMap() {
+        return PreferenceManager.getDefaultSharedPreferences(DashCamApplication.getContext()).getBoolean(SettingsFragment.KEY_USE_MAP, true);
+    }
 }

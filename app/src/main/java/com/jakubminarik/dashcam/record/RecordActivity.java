@@ -42,6 +42,7 @@ import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.jakubminarik.dashcam.DAO.VideoDAO;
 import com.jakubminarik.dashcam.R;
 import com.jakubminarik.dashcam.base.BaseActivityDI;
@@ -87,6 +88,7 @@ public class RecordActivity extends BaseActivityDI implements RecordActivityView
     private boolean showMap;
     private boolean fullScreen;
     float scale;
+    private boolean useMap;
 
     Location startLocation;
 
@@ -173,6 +175,7 @@ public class RecordActivity extends BaseActivityDI implements RecordActivityView
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
+        setTheme(R.style.AppThemeNoActionBar);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_record);
         ButterKnife.bind(this);
@@ -181,14 +184,8 @@ public class RecordActivity extends BaseActivityDI implements RecordActivityView
                     .replace(R.id.container, RecordFragment.newInstance())
                     .commit();
         }
-        if (savedInstanceState != null && savedInstanceState.containsKey(Constants.ARG_START_LOCATION)) {
-            startLocation = savedInstanceState.getParcelable(Constants.ARG_START_LOCATION);
-        }
-
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
-
         mapFrag = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
-        mapFrag.getMapAsync(this);
+
 
         handlerThread = new HandlerThread("backgroundThreadForMaps");
         if (!handlerThread.isAlive())
@@ -200,7 +197,57 @@ public class RecordActivity extends BaseActivityDI implements RecordActivityView
         showMap = sharedPref.getBoolean(SettingsFragment.KEY_SHOW_MAP, true);
         fullScreen = sharedPref.getBoolean(SettingsFragment.KEY_MAP_FULLSCREEN, false);
         scale = getContext().getResources().getDisplayMetrics().density;
+
+        if (savedInstanceState != null && savedInstanceState.containsKey(Constants.ARG_START_LOCATION)) {
+            startLocation = savedInstanceState.getParcelable(Constants.ARG_START_LOCATION);
+        }
+        initLocation();
+
         updateButtons();
+    }
+
+    private void initLocation() {
+        useMap = sharedPref.getBoolean(SettingsFragment.KEY_USE_MAP, true);
+
+        if (fusedLocationClient == null) {
+            fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+        }
+        if (useMap) {
+            mapFrag.getMapAsync(this);
+            mapFrag.getView().setVisibility(View.VISIBLE);
+        } else {
+            mapFrag.getView().setVisibility(View.GONE);
+        }
+    }
+
+    private void requestLocationUpdates() {
+        if (useMap) {
+            if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                    //Location Permission already granted
+                    fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, handlerThread.getLooper());
+                    googleMap.setMyLocationEnabled(true);
+                } else {
+                    //Request Location Permission
+                    checkLocationPermission();
+                }
+            } else {
+                fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, handlerThread.getLooper());
+                googleMap.setMyLocationEnabled(true);
+            }
+        }
+    }
+
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        useMap = sharedPref.getBoolean(SettingsFragment.KEY_USE_MAP, true);
+        if (useMap) {
+            mapFrag.getView().setVisibility(View.VISIBLE);
+        } else {
+            mapFrag.getView().setVisibility(View.GONE);
+        }
     }
 
     @Override
@@ -254,22 +301,6 @@ public class RecordActivity extends BaseActivityDI implements RecordActivityView
         requestLocationUpdates();
     }
 
-    private void requestLocationUpdates() {
-        if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-                //Location Permission already granted
-                fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, handlerThread.getLooper());
-                googleMap.setMyLocationEnabled(true);
-            } else {
-                //Request Location Permission
-                checkLocationPermission();
-            }
-        } else {
-            fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, handlerThread.getLooper());
-            googleMap.setMyLocationEnabled(true);
-        }
-    }
-
     /**
      * Moves camera to suitable position and when the map is loaded, takes a snapshot.
      *
@@ -277,35 +308,77 @@ public class RecordActivity extends BaseActivityDI implements RecordActivityView
      * @return String path to mapImage file
      */
     public void onVideoStopped(final int videoId) {
-        if (startLocation == null) {
-            return;
-        }
-        if (fusedLocationClient != null) {
-            fusedLocationClient.removeLocationUpdates(locationCallback);
-        }
-        LatLng endLatLng = new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude());
-        final MarkerOptions markerOptions = new MarkerOptions();
-        markerOptions.position(endLatLng);
-        markerOptions.title("End");
-        markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_MAGENTA));
-
-        final LatLngBounds.Builder builder = LatLngBounds.builder();
-        builder.include(new LatLng(startLocation.getLatitude(), startLocation.getLongitude()));
-        builder.include(endLatLng);
-
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                currLocationMarker = googleMap.addMarker(markerOptions);
-                googleMap.moveCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 100));
-                googleMap.setOnMapLoadedCallback(new GoogleMap.OnMapLoadedCallback() {
-                    @Override
-                    public void onMapLoaded() {
-                        captureAndSaveMapImage(videoId);
-                    }
-                });
+        if (useMap) {
+            if (startLocation == null) {
+                return;
             }
-        });
+            if (fusedLocationClient != null) {
+                fusedLocationClient.removeLocationUpdates(locationCallback);
+            }
+            LatLng endLatLng = new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude());
+            final MarkerOptions markerOptions = new MarkerOptions();
+            markerOptions.position(endLatLng);
+            markerOptions.title("End");
+            markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_MAGENTA));
+
+            final LatLngBounds.Builder builder = LatLngBounds.builder();
+            builder.include(new LatLng(startLocation.getLatitude(), startLocation.getLongitude()));
+            builder.include(endLatLng);
+
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    currLocationMarker = googleMap.addMarker(markerOptions);
+                    googleMap.moveCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 100));
+                    googleMap.setOnMapLoadedCallback(new GoogleMap.OnMapLoadedCallback() {
+                        @Override
+                        public void onMapLoaded() {
+                            captureAndSaveMapImage(videoId);
+                        }
+                    });
+                }
+            });
+        }
+        saveLocationsToVideo(videoId);
+    }
+
+    private void saveLocationsToVideo(int videoId) {
+        Video video = VideoDAO.findById(videoId);
+
+        List<Address> addresses;
+        Geocoder geocoder = new Geocoder(this, Locale.getDefault());
+        try {
+            if (startLocation != null) {
+                addresses = geocoder.getFromLocation(startLocation.getLatitude(), startLocation.getLongitude(), 1);
+                String fullAddress = addresses.get(0).getAddressLine(0);
+                video.setTripStartAddress(fullAddress);
+            }
+            if (lastLocation != null) {
+                addresses = geocoder.getFromLocation(lastLocation.getLatitude(), lastLocation.getLongitude(), 1);
+                String fullAddress = addresses.get(0).getAddressLine(0);
+                video.setTripEndAddress(fullAddress);
+            } else {
+                setVideoEndLocationAsLastIfPossible(video);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+
+    }
+
+    public void onVideoStarted() {
+        if (!useMap && fusedLocationClient != null && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            fusedLocationClient.getLastLocation()
+                    .addOnSuccessListener(this, new OnSuccessListener<Location>() {
+                        @Override
+                        public void onSuccess(Location location) {
+                            if (location != null) {
+                                startLocation = location;
+                            }
+                        }
+                    });
+        }
     }
 
     //saves snapshot of map
@@ -346,24 +419,33 @@ public class RecordActivity extends BaseActivityDI implements RecordActivityView
         fo.write(bytes.toByteArray());
         fo.close();
 
-
         Video video = VideoDAO.findById(videoId);
-        List<Address> addresses;
-        Geocoder geocoder = new Geocoder(this, Locale.getDefault());
-        if (startLocation != null) {
-            addresses = geocoder.getFromLocation(startLocation.getLatitude(), startLocation.getLongitude(), 1);
-            String fullAddress = addresses.get(0).getAddressLine(0);
-            video.setTripStartAddress(fullAddress);
-        }
-        if (lastLocation != null) {
-            addresses = geocoder.getFromLocation(lastLocation.getLatitude(), lastLocation.getLongitude(), 1);
-            String fullAddress = addresses.get(0).getAddressLine(0);
-            video.setTripEndAddress(fullAddress);
-        }
-
         video.setPathToMaoImage(f.getAbsolutePath());
         video.save();
 
+    }
+
+    private void setVideoEndLocationAsLastIfPossible(final Video video) {
+        if (!useMap && fusedLocationClient != null && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            fusedLocationClient.getLastLocation()
+                    .addOnSuccessListener(this, new OnSuccessListener<Location>() {
+                        @Override
+                        public void onSuccess(Location location) {
+                            if (location != null) {
+                                try {
+                                    List<Address> addresses;
+                                    Geocoder geocoder = new Geocoder(RecordActivity.this, Locale.getDefault());
+                                    addresses = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
+                                    String fullAddress = addresses.get(0).getAddressLine(0);
+                                    video.setTripEndAddress(fullAddress);
+                                    video.save();
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        }
+                    });
+        }
     }
 
     @OnClick(R.id.trackPositionButton)
@@ -501,6 +583,4 @@ public class RecordActivity extends BaseActivityDI implements RecordActivityView
             }
         }
     }
-
-
 }

@@ -190,4 +190,11 @@
     <string name="edit">Edit</string>
     <string name="edit_name">Edit name</string>
     <string name="save">Save</string>
+    <string name="smart_features">Smart features</string>
+    <string name="settings_automatic_start">settingsAutomaticStart</string>
+    <string name="auto_start">Auto on/off</string>
+    <string name="auto_on_off_summary">Start/stop recording automatically when motion is detected</string>
+    <string name="duration_summary">Minimum guaranteed video duration after saving.</string>
+    <string name="use_map_summary">Show and record trips on map</string>
+    <string name="use_map">Use map</string>
 </resources>

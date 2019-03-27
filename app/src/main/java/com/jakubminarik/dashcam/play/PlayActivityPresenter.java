@@ -98,14 +98,21 @@ public class PlayActivityPresenter extends BasePresenter<PlayActivityView> {
 
     public void reloadVideo(int videoToReloadPosition) {
         Video videoToReload = null;
+        Video videoFromDb = null;
         try {
             videoToReload = getCurrentVideoList().get(videoToReloadPosition);
         } catch (IndexOutOfBoundsException e) {
         }
         if (videoToReload != null) {
-            videoToReload.load();
+            videoFromDb = VideoDAO.findById(videoToReload.getId());
         }
-        view.reloadItem(videoToReloadPosition);
+        if (videoFromDb != null) {
+            videoToReload.load();
+            view.reloadItem(videoToReloadPosition);
+        } else {
+            getCurrentVideoList().remove(videoToReload);
+            view.notifyItemRemoved(videoToReloadPosition);
+        }
     }
 
     public void deleteAllVideos() {
@@ -143,7 +150,7 @@ public class PlayActivityPresenter extends BasePresenter<PlayActivityView> {
         showingFiltered = false;
     }
 
-    private List<Video> getCurrentVideoList() {
+    public List<Video> getCurrentVideoList() {
         if (isShowingFiltered()) {
             return filteredVideos;
         } else {

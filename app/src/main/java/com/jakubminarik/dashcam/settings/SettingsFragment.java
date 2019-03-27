@@ -17,6 +17,8 @@ public class SettingsFragment extends PreferenceFragment {
     public static final String KEY_MAP_SIZE = "mapSize";
     public static final String KEY_SHOW_MAP = "showMap";
     public static final String KEY_MAP_FULLSCREEN = "mapFulScreen";
+    public static final String KEY_AUTO_ON_OFF = "autoOnOff";
+    public static final String KEY_USE_MAP = "useMap";
 
     SharedPreferences.OnSharedPreferenceChangeListener listener;
 

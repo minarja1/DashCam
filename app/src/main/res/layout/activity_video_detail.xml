@@ -17,20 +17,20 @@
 
 
             <ImageView
-                android:layout_marginTop="20dp"
                 android:id="@+id/videoImageView"
-                android:layout_margin="16dp"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:layout_alignParentTop="true" />
+                android:layout_alignParentTop="true"
+                android:layout_margin="16dp"
+                android:layout_marginTop="20dp" />
 
             <TextView
                 android:id="@+id/mapNotFoundTextView"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_centerInParent="true"
-                android:drawablePadding="10dp"
                 android:drawableRight="@drawable/ic_map_white_24dp"
+                android:drawablePadding="10dp"
                 android:text="@string/image_not_found"
                 android:visibility="gone" />
 
@@ -42,51 +42,52 @@
             android:layout_height="1dp"
             android:layout_below="@+id/mapImageViewContainer"
             android:layout_marginTop="20dp"
-            android:background="@color/colorDivider" />
+            android:background="@color/colorAccent" />
 
         <TextView
             android:id="@+id/dateTextView"
             style="@style/mediumText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_alignParentStart="true"
             android:layout_below="@id/divider"
-            android:layout_marginEnd="16dp"
+            android:layout_alignParentStart="true"
             android:layout_marginStart="16dp"
-            android:layout_marginTop="20dp" />
+            android:layout_marginTop="20dp"
+            android:layout_marginEnd="16dp" />
 
         <TextView
             android:id="@+id/durationTextView"
             style="@style/mediumText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_alignParentStart="true"
             android:layout_below="@id/dateTextView"
-            android:layout_marginEnd="16dp"
+            android:layout_alignParentStart="true"
             android:layout_marginStart="16dp"
-            android:layout_marginTop="20dp" />
+            android:layout_marginTop="20dp"
+            android:layout_marginEnd="16dp" />
 
         <TextView
             android:id="@+id/fromTextView"
             style="@style/mediumText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_alignParentStart="true"
             android:layout_below="@id/durationTextView"
-            android:layout_marginEnd="16dp"
+            android:layout_alignParentStart="true"
             android:layout_marginStart="16dp"
-            android:layout_marginTop="20dp" />
+            android:layout_marginTop="20dp"
+            android:layout_marginEnd="16dp" />
 
         <TextView
             android:id="@+id/toTextView"
             style="@style/mediumText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_alignParentStart="true"
             android:layout_below="@id/fromTextView"
-            android:layout_marginEnd="16dp"
+            android:layout_alignParentStart="true"
             android:layout_marginStart="16dp"
-            android:layout_marginTop="20dp" />
+            android:layout_marginTop="20dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="16dp" />
 
     </RelativeLayout>
 

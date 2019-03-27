@@ -56,12 +56,13 @@
             android:layout_height="0dp"
             android:layout_weight="1">
 
-            <ImageView
+            <ImageButton
                 android:id="@+id/videoButton"
-                android:layout_width="100dp"
-                android:layout_height="100dp"
+                style="@android:style/Widget.Material.Light.Button.Borderless"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
                 android:layout_centerInParent="true"
-                android:layout_gravity="center"
+                android:scaleType="centerCrop"
                 android:src="@drawable/ic_fiber_manual_record_red_24dp" />
 
             <ProgressBar
@@ -91,59 +92,70 @@
         </RelativeLayout>
     </LinearLayout>
 
-    <FrameLayout
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="30dp"
         android:layout_alignParentStart="true"
         android:layout_alignParentBottom="true"
         android:layout_toStartOf="@+id/right_side"
         android:background="@color/greyTransparent"
+        android:gravity="center_vertical"
         android:orientation="horizontal">
 
-        <RelativeLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent">
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="20dp"
+            android:paddingEnd="4dp"
+            android:src="@drawable/ic_refresh_white_24dp" />
 
-            <TextView
-                android:id="@+id/addressTextView"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentStart="true"
-                android:layout_centerVertical="true"
-                android:layout_marginStart="20dp"
-                android:textColor="@color/colorText" />
+        <TextView
+            android:id="@+id/durationTextView"
+            style="@style/TextRecordBottom"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
 
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="20dp"
+            android:paddingEnd="4dp"
+            android:src="@drawable/ic_motion" />
 
-            <TextView
-                android:id="@+id/speedTextView"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_centerVertical="true"
-                android:layout_toLeftOf="@id/refreshImageView"
-                android:textColor="@color/colorText" />
+        <TextView
+            android:id="@+id/autoOnOfTextView"
+            style="@style/TextRecordBottom"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/colorText" />
 
-            <ImageView
-                android:id="@+id/refreshImageView"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_centerVertical="true"
-                android:layout_toLeftOf="@id/durationTextView"
-                android:paddingStart="20dp"
-                android:paddingEnd="4dp"
-                android:src="@drawable/ic_refresh_white_24dp" />
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="20dp"
+            android:paddingEnd="4dp"
+            android:src="@drawable/ic_map_white_24dp" />
 
-            <TextView
-                android:id="@+id/durationTextView"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentEnd="true"
-                android:layout_centerVertical="true"
-                android:paddingEnd="20dp"
-                android:textColor="@color/colorText" />
+        <TextView
+            android:id="@+id/mapTextView"
+            style="@style/TextRecordBottom"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/colorText" />
 
-        </RelativeLayout>
+        <View
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"/>
 
+        <TextView
+            android:id="@+id/speedTextView"
+            style="@style/TextRecordBottom"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="20dp"
+            android:textColor="@color/colorText" />
 
-    </FrameLayout>
+    </LinearLayout>
 
 </RelativeLayout>

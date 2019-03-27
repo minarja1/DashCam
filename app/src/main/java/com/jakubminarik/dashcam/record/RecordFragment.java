@@ -22,7 +22,6 @@ import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.params.StreamConfigurationMap;
-import android.location.Geocoder;
 import android.location.Location;
 import android.media.CamcorderProfile;
 import android.media.MediaRecorder;
@@ -46,7 +45,6 @@ import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
-import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -73,7 +71,6 @@ import java.sql.Date;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
@@ -234,25 +231,26 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
     private String nextVideoAbsolutePath;
     private CaptureRequest.Builder previewBuilder;
 
-    @BindView(R.id.addressTextView)
-    TextView addressTextView;
     @BindView(R.id.speedTextView)
     TextView speedTextView;
     @BindView(R.id.settingsButton)
     ImageButton settingsButton;
     @BindView(R.id.durationTextView)
     TextView durationTextView;
+    @BindView(R.id.autoOnOfTextView)
+    TextView autoOnOfTextView;
+    @BindView(R.id.mapTextView)
+    TextView mapTextView;
 
     @BindView(R.id.texture)
     AutoFitTextureView textureView;
 
     @BindView(R.id.videoButton)
-    ImageView recordButton;
+    ImageButton recordButton;
 
     @BindView(R.id.progressBar)
     ProgressBar progressBar;
 
-    private Geocoder geocoder;
     private boolean cameraOpened = false;
     private boolean kph;
     private int durationInMinutes;
@@ -274,13 +272,12 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        geocoder = new Geocoder(getActivity(), Locale.getDefault());
         setRetainInstance(true);
     }
 
     @Override
     public void onLocationChanged(final Location location) {
-        LocationHelper.updateLocationViews(location, getActivity(), addressTextView, speedTextView, geocoder, kph);
+        LocationHelper.updateLocationViews(location, getActivity(), speedTextView, kph);
     }
 
 
@@ -348,6 +345,9 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
         }
 
         durationTextView.setText(String.format("%s %s", durationInMinutes, getResources().getString(R.string.minutes)));
+
+        autoOnOfTextView.setText(SharedPrefHelper.getAutoOnOff() ? "ON" : "OFF");
+        mapTextView.setText(SharedPrefHelper.getUseMap() ? "ON" : "OFF");
     }
 
     @Override
@@ -872,6 +872,12 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
         protected void onPostExecute(Void aVoid) {
             super.onPostExecute(aVoid);
             recordButton.setEnabled(true);
+
+            RecordActivity activity = (RecordActivity) getActivity();
+
+            if (activity != null) {
+                activity.onVideoStarted();
+            }
         }
     }
 
@@ -919,6 +925,7 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
         @Override
         protected void onPostExecute(Void result) {
             super.onPostExecute(result);
+            recordButton.clearAnimation();
             recordButton.setImageDrawable(ContextCompat.getDrawable(getContext(), isRecordingVideo ? R.drawable.ic_stop_white_24dp : R.drawable.ic_fiber_manual_record_red_24dp));
 
             recordButton.setVisibility(View.VISIBLE);
