@@ -61,7 +61,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_centerInParent="true"
-        android:drawableBottom="@drawable/places_ic_search"
+        android:drawableBottom="@drawable/ic_search_white_24dp"
         android:text="@string/no_videos"
         android:visibility="gone" />
 </RelativeLayout>

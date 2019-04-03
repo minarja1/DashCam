@@ -9,6 +9,7 @@ import android.app.Fragment;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Matrix;
@@ -81,7 +82,7 @@ import butterknife.OnClick;
 import static com.jakubminarik.dashcam.base.Constants.TEMP1;
 import static com.jakubminarik.dashcam.base.Constants.TEMP2;
 
-public class RecordFragment extends Fragment implements FragmentCompat.OnRequestPermissionsResultCallback, RecordFragmentView {
+public class RecordFragment extends Fragment implements FragmentCompat.OnRequestPermissionsResultCallback, RecordFragmentView, SharedPreferences.OnSharedPreferenceChangeListener {
 
 
     private static final int SENSOR_ORIENTATION_DEFAULT_DEGREES = 90;
@@ -225,8 +226,8 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
                 activity.finish();
             }
         }
-
     };
+
     private Integer sensorOrientation;
     private String nextVideoAbsolutePath;
     private CaptureRequest.Builder previewBuilder;
@@ -255,6 +256,9 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
     private boolean kph;
     private int durationInMinutes;
     private long videoStarted;
+    private boolean autoOnOff;
+
+    private TransitionRecognition transitionRecognition;
 
     public static RecordFragment newInstance() {
         return new RecordFragment();
@@ -273,6 +277,7 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setRetainInstance(true);
+        transitionRecognition = new TransitionRecognition();
     }
 
     @Override
@@ -346,8 +351,22 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
 
         durationTextView.setText(String.format("%s %s", durationInMinutes, getResources().getString(R.string.minutes)));
 
-        autoOnOfTextView.setText(SharedPrefHelper.getAutoOnOff() ? "ON" : "OFF");
+        autoOnOff = SharedPrefHelper.getAutoOnOff();
+        autoOnOfTextView.setText(autoOnOff ? "ON" : "OFF");
         mapTextView.setText(SharedPrefHelper.getUseMap() ? "ON" : "OFF");
+
+        if (transitionRecognition == null) {
+            transitionRecognition = new TransitionRecognition();
+        }
+        transitionRecognition.startTracking(getContext());
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        if (transitionRecognition != null) {
+            transitionRecognition.stopTracking();
+        }
     }
 
     @Override
@@ -657,6 +676,11 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
         if (activity != null) {
             activity.onVideoStopped(video.getId());
         }
+    }
+
+    @Override
+    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+
     }
 
     public static class ConfirmationDialog extends DialogFragment {
