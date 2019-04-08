@@ -15,6 +15,10 @@ import android.graphics.Bitmap;
 import android.graphics.Matrix;
 import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
@@ -25,6 +29,7 @@ import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.location.Location;
 import android.media.CamcorderProfile;
+import android.media.MediaPlayer;
 import android.media.MediaRecorder;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -61,6 +66,8 @@ import com.jakubminarik.dashcam.helper.StorageHelper;
 import com.jakubminarik.dashcam.helper.ViewHelper;
 import com.jakubminarik.dashcam.model.Video;
 import com.jakubminarik.dashcam.play.PlayActivity;
+import com.jakubminarik.dashcam.record.accelerometer.AccelerationHelper;
+import com.jakubminarik.dashcam.record.transition_recognition.TransitionRecognition;
 import com.jakubminarik.dashcam.settings.SettingsActivity;
 import com.jakubminarik.dashcam.view.AutoFitTextureView;
 
@@ -82,7 +89,8 @@ import butterknife.OnClick;
 import static com.jakubminarik.dashcam.base.Constants.TEMP1;
 import static com.jakubminarik.dashcam.base.Constants.TEMP2;
 
-public class RecordFragment extends Fragment implements FragmentCompat.OnRequestPermissionsResultCallback, RecordFragmentView, SharedPreferences.OnSharedPreferenceChangeListener {
+public class RecordFragment extends Fragment implements FragmentCompat.OnRequestPermissionsResultCallback, RecordFragmentView,
+        SharedPreferences.OnSharedPreferenceChangeListener, SensorEventListener, AccelerationHelper.AccelerationEventListener {
 
 
     private static final int SENSOR_ORIENTATION_DEFAULT_DEGREES = 90;
@@ -257,8 +265,13 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
     private int durationInMinutes;
     private long videoStarted;
     private boolean autoOnOff;
+    private MediaPlayer mediaPlayer;
 
     private TransitionRecognition transitionRecognition;
+    private AccelerationHelper accelerationHelper;
+    private SensorManager sensorManager;
+    private Sensor accelerometer;
+
 
     public static RecordFragment newInstance() {
         return new RecordFragment();
@@ -278,6 +291,11 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
         super.onCreate(savedInstanceState);
         setRetainInstance(true);
         transitionRecognition = new TransitionRecognition();
+        mediaPlayer = MediaPlayer.create(getContext(), R.raw.beep_short);
+        //todo catchovat kdyz neni akcelerometr
+        sensorManager = (SensorManager) getActivity().getSystemService(Context.SENSOR_SERVICE);
+        accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
+        accelerationHelper = new AccelerationHelper(this);
     }
 
     @Override
@@ -359,6 +377,7 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
             transitionRecognition = new TransitionRecognition();
         }
         transitionRecognition.startTracking(getContext());
+        sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_FASTEST);
     }
 
     @Override
@@ -367,6 +386,7 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
         if (transitionRecognition != null) {
             transitionRecognition.stopTracking();
         }
+        sensorManager.unregisterListener(this);
     }
 
     @Override
@@ -376,6 +396,7 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
             closeCamera();
             stopBackgroundThread();
         }
+        mediaPlayer.release();
         super.onStop();
     }
 
@@ -683,6 +704,40 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
 
     }
 
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+        if (accelerationHelper != null) {
+            accelerationHelper.onSensorChanged(event);
+        }
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+
+    }
+
+    @Override
+    public void onMotionDetected() {
+        //todo start recording
+        if (!isRecordingVideo) {
+            startRecordingVideo();
+        }
+    }
+
+    @Override
+    public void onAccidentDetected() {
+        //todo
+        Toast.makeText(getContext(), "accident", Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onNothingDetected() {
+        //todo stop recording
+        if (isRecordingVideo) {
+            stopRecordingAndSaveVideo();
+        }
+    }
+
     public static class ConfirmationDialog extends DialogFragment {
 
         @Override
@@ -884,6 +939,11 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
                         }
                     }
                 }, backgroundHandler);
+                try {
+                    mediaPlayer.start();
+                } catch (IllegalStateException e) {
+                    e.printStackTrace();
+                }
             } catch (CameraAccessException | IOException e) {
                 isRecordingVideo = false;
                 Log.d(TAG, "Failed to start recording");
@@ -914,6 +974,11 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
             recordButton.clearAnimation();
             recordButton.setVisibility(View.GONE);
             progressBar.setVisibility(View.VISIBLE);
+            try {
+                mediaPlayer.start();
+            } catch (IllegalStateException e) {
+                e.printStackTrace();
+            }
         }
 
         @Override

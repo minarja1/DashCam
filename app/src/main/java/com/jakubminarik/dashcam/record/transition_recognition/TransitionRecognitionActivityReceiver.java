@@ -1,4 +1,4 @@
-package com.jakubminarik.dashcam.record;
+package com.jakubminarik.dashcam.record.transition_recognition;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -33,6 +33,7 @@ public class TransitionRecognitionActivityReceiver extends BroadcastReceiver {
     private void onDetectedTransitionEvent(ActivityTransitionEvent transitionEvent) {
         switch (transitionEvent.getActivityType()) {
             case DetectedActivity.IN_VEHICLE:
+                //todo event ve fragmentu
                 String enterExit = transitionEvent.getTransitionType() == ActivityTransition.ACTIVITY_TRANSITION_EXIT ? "exit" : "enter";
                 Toast.makeText(context, "vehicle!!! " + enterExit, Toast.LENGTH_SHORT).show();
                 break;

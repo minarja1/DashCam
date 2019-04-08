@@ -61,7 +61,7 @@
                 android:resource="@xml/provider_paths" />
         </provider>
 
-        <receiver android:name=".record.TransitionRecognitionActivityReceiver" />
+        <receiver android:name=".record.transition_recognition.TransitionRecognitionActivityReceiver" />
     </application>
 
 </manifest>

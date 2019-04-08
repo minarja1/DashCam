@@ -1,4 +1,4 @@
-package com.jakubminarik.dashcam.record;
+package com.jakubminarik.dashcam.record.transition_recognition;
 
 import android.app.PendingIntent;
 import android.content.Context;
@@ -44,13 +44,13 @@ public class TransitionRecognition {
                 .build());
 
         transitions.add(new ActivityTransition.Builder()
-                .setActivityType(DetectedActivity.WALKING)
+                .setActivityType(DetectedActivity.IN_VEHICLE)
                 .setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_ENTER)
                 .build());
 
 
         transitions.add(new ActivityTransition.Builder()
-                .setActivityType(DetectedActivity.WALKING)
+                .setActivityType(DetectedActivity.IN_VEHICLE)
                 .setActivityTransition(ActivityTransition.ACTIVITY_TRANSITION_EXIT)
                 .build());
 
