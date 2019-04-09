@@ -719,7 +719,7 @@ public class RecordFragment extends Fragment implements FragmentCompat.OnRequest
     @Override
     public void onMotionDetected() {
         //todo start recording
-        if (!isRecordingVideo) {
+            if (!isRecordingVideo) {
             startRecordingVideo();
         }
     }
